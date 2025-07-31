@@ -1,0 +1,18 @@
+@import url('https://fonts.googleapis.com/css2?family=Bitcount+Prop+Double:wght@100..900&family=Michroma&family=Quicksand:wght@300..700&family=Varela+Round&display=swap');
+@import "tailwindcss";
+:root {
+    --varela-round-regular: 'Varela Round', sans-serif;
+    --bitcount-prop-double: 'Bitcount Prop Double', sans-serif;
+    --quicksand: 'Quicksand',sans-serif;
+    --michroma-regular: 'Michroma', sans-serif;
+}
+input[type='password']::-ms-reveal,
+input[type='password']::-ms-clear,
+input[type='password']::-webkit-credentials-auto-fill-button,
+input[type='password']::-webkit-reveal-password-button {
+    display: none;
+}
+
+input[type='password']::-webkit-textfield-decoration-container {
+    display: none !important;
+}
