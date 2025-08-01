@@ -5,6 +5,9 @@ import FormInput from "../components/FormInput.tsx";
 import Button from "../components/Button.tsx";
 import SocialButton from "../components/SocialButton.tsx";
 import logo from "../assets/img/logo.png";
+import { GoogleLogin } from '@react-oauth/google';
+import axios from "axios";
+
 const Login = () => {
     const [form, setForm] = useState({ email: "", password: "" });
 
@@ -30,7 +33,7 @@ const Login = () => {
                     Show the world your ideas and projects.
                     Create a portfolio, find like-minded people, and grow together.
                 </DisplayText>
-            </div>1
+            </div>
             <DisplayForm onSubmit={handleSubmit} >
                 <DisplayText variant="primary" className="mb-4">Hello!</DisplayText>
                 <DisplayText variant="secondary">We are really happy to see you aggain</DisplayText>
@@ -57,13 +60,28 @@ const Login = () => {
                 <DisplayText variant="secondary" className="mt-4">
                     or sign in with
                 </DisplayText>
+                <div className={"mt-4"}>
+                <GoogleLogin
+
+                    onSuccess={async (credentialResponse) => {
+                        try {
+                            const res = await axios.post('http://localhost:3000/api/auth/google', {
+                                idToken: credentialResponse.credential,
+                            });
+                            const { token } = res.data;
+                            localStorage.setItem('token', token);
+                        } catch (err) {
+                            console.error('Google Login Error:', err);
+                        }
+                    }}
+                    onError={() => console.log('Login Failed')}
+                    useOneTap
+                />
+                </div>
                 <SocialButton
-                    provider={"google"}
-                    className="mt-4"/>
-                <SocialButton
-                    provider={"github"}
+                    provider="github"
                     className="mt-4"
-                    onClick={()=> console.log("Login with GitHub")}
+                    onClick={() => console.log("Login with GitHub")}
                 />
                 <DisplayText variant="secondary" className="mt-4">
                     Don't have an account? <a href="/register" className="text-blue-300 hover:text-blue-200">Register</a>
