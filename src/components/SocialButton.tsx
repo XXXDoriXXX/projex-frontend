@@ -13,12 +13,12 @@ type SocialButtonProps = {
 
 const providerInfo: Record<Provider, { label: string; icon: JSX.Element; bg: string }> = {
     google: {
-        label: "Login with Google",
+        label: "Enter with Google",
         icon: <FcGoogle size={20} />,
         bg: "bg-white text-gray-800 hover:bg-gray-100",
     },
     github: {
-        label: "Login with GitHub",
+        label: "Enter with GitHub",
         icon: <FaGithub size={20} />,
         bg: "bg-gray-900 text-white hover:bg-gray-800",
     },
