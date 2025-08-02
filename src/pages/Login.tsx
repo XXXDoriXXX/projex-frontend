@@ -7,16 +7,36 @@ import SocialButton from "../components/SocialButton.tsx";
 import logo from "../assets/img/logo.png";
 import { GoogleLogin } from '@react-oauth/google';
 import axios from "axios";
+import {useNavigate} from "react-router-dom";
 
 const Login = () => {
     const [form, setForm] = useState({ email: "", password: "" });
-
+    const navigate = useNavigate();
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setForm({ ...form, [e.target.name]: e.target.value });
     };
-
-    const handleSubmit = (e: React.FormEvent) => {
+    type LoginResponse = {
+        token: string;
+    };
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+            if (!form.email || !form.password) {
+                console.error("All fields are required");
+                return;
+            }
+            try {
+                const res = await axios.post<LoginResponse>(
+                    "http://localhost:3000/api/auth/login",
+                    form
+                );
+                const { token } = res.data;
+                localStorage.setItem("token", token);
+                navigate("/");
+            } catch (err) {
+                console.error("Registration Error:", err);
+            }
+
+
         console.log("Login with:", form);
     };
 

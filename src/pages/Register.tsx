@@ -6,6 +6,7 @@ import Button from "../components/Button.tsx";
 import SocialButton from "../components/SocialButton.tsx";
 import logo from "../assets/img/logo.png";
 import {useNavigate} from "react-router-dom";
+import axios from "axios";
 const Register = () => {
     const [form, setForm] = useState({ username:"",email: "", password: "" });
     const navigate = useNavigate();
@@ -13,11 +14,28 @@ const Register = () => {
         setForm({ ...form, [e.target.name]: e.target.value });
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Register with:", form);
-        navigate("/code");
+        if (!form.username || !form.email || !form.password) {
+            console.error("All fields are required");
+            return;
+        }
+        try {
+            const res = await axios.post<RegisterResponse>(
+                "http://localhost:3000/api/auth/register",
+                form
+            );
+            const { token } = res.data;
+            localStorage.setItem("token", token);
+            navigate("/code");
+        } catch (err) {
+            console.error("Registration Error:", err);
+        }
     };
+
+    type RegisterResponse = {
+        token: string;
+    }
 
     return (
         <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 md:p-8 xl:p-32 bg-[url(./assets/img/bg1.jpg)] bg-cover bg-center">
