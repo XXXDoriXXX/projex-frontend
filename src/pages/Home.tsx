@@ -1,6 +1,45 @@
 import logo from '../assets/img/logo.png';
+import { useEffect, useState } from "react";
+import axios from "axios";
 
 const Home = () => {
+    const [username, setUsername] = useState<string | null>(null);
+
+    useEffect(() => {
+        const rawUser = localStorage.getItem("user");
+        if (rawUser) {
+            try {
+                const user = JSON.parse(rawUser);
+                setUsername(user?.username || null);
+            } catch (err) {
+                console.warn("Помилка при парсингу user з localStorage:", err);
+            }
+        }
+
+        const fetchUser = async () => {
+            try {
+                const res = await axios.post(
+                    "http://localhost:3000/api/auth/me",
+                    {},
+                    {
+                        headers: {
+                            Authorization: `Bearer ${localStorage.getItem("token")}`,
+                        },
+                    }
+                );
+                const user = res.data; // <- просто res.data
+                console.log("Fetched User:", user);
+                localStorage.setItem("user", JSON.stringify(user));
+                setUsername(user?.username || null);
+            } catch (err) {
+                console.error("Registration Error:", err);
+            }
+        };
+
+        fetchUser();
+    }, []);
+
+
     return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-300 via-purple-400 to-pink-500 dark:from-neutral-900 dark:via-neutral-800 dark:to-neutral-700 text-center px-6">
 
@@ -13,7 +52,7 @@ const Home = () => {
 
             {/* Заголовок */}
             <h1 className="font-['Bitcount_Prop_Double'] text-8xl sm:text-9xl text-white font-extralight drop-shadow-[0_2px_10px_rgba(0,0,0,0.6)] tracking-wide select-none">
-                Projex
+                {username ? `Привіт, ${username}!` : "Projex"}
             </h1>
 
             {/* Підзаголовок */}
@@ -37,14 +76,14 @@ const Home = () => {
 
             {/* Анімація кастомна для повільного обертання лого */}
             <style>{`
-        @keyframes spin-slow {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        .animate-spin-slow {
-          animation: spin-slow 20s linear infinite;
-        }
-      `}</style>
+                @keyframes spin-slow {
+                  from { transform: rotate(0deg); }
+                  to { transform: rotate(360deg); }
+                }
+                .animate-spin-slow {
+                  animation: spin-slow 20s linear infinite;
+                }
+            `}</style>
         </div>
     );
 };

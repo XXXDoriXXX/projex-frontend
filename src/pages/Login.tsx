@@ -101,7 +101,9 @@ const Login = () => {
                 <SocialButton
                     provider="github"
                     className="mt-4"
-                    onClick={() => console.log("Login with GitHub")}
+                    onClick={() => // при натисканні на кнопку:
+                        window.location.href = `https://github.com/login/oauth/authorize?client_id=Ov23liJuqLlwYgqwEX9W&scope=user:email&redirect_uri=http://localhost:5173/auth/github/callback`
+                    }
                 />
                 <DisplayText variant="secondary" className="mt-4">
                     Don't have an account? <a href="/register" className="text-blue-300 hover:text-blue-200">Register</a>

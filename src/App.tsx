@@ -5,6 +5,7 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register.tsx";
 import Code from "./pages/Code.tsx";
+import GithubCallback from "./features/auth/GithubCallback.tsx";
 
 const App = () => {
     return (
@@ -14,6 +15,7 @@ const App = () => {
             <Route path="/login" element={<Login />} />
             <Route path={ "/register" } element={<Register />} />
             <Route path={"/code"} element={<Code/>}/>
+            {<Route path="/auth/github/callback" element={<GithubCallback />} />}
             <Route path="*" element={<Navigate to="/" />} />
         </Routes>
         </GoogleOAuthProvider>

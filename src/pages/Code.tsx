@@ -40,7 +40,7 @@ const Code = () => {
     };
 
     const handleResend = async () => {
-        if (resendTimer > 0) return; // Забороняємо клік, поки таймер не вийде
+        if (resendTimer > 0) return;
 
         setIsResending(true);
         try {
