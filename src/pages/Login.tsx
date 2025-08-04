@@ -8,6 +8,7 @@ import logo from "../assets/img/logo.png";
 import { GoogleLogin } from '@react-oauth/google';
 import axios from "axios";
 import {useNavigate} from "react-router-dom";
+import DisplayDiv from "../components/DisplayDiv.tsx";
 
 const Login = () => {
     const [form, setForm] = useState({ email: "", password: "" });
@@ -43,7 +44,7 @@ const Login = () => {
     return (
         <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 md:p-8 xl:p-32 bg-[url(./assets/img/bg1.jpg)] bg-cover bg-center">
 
-            <div className=" hidden xl:block flex flex-col max-w-max text-white bg-white/10 rounded-xl p-8 mr-30 shadow-lg backdrop-blur-md border border-white/50 ">
+                <DisplayDiv className={"hidden xl:block flex flex-col max-w-max mr-16"}>
                 <DisplayText variant={"primary"} className={"text-7xl font-bold leading-tight "}>
                     Share yourself
                 </DisplayText>
@@ -53,7 +54,7 @@ const Login = () => {
                     Show the world your ideas and projects.
                     Create a portfolio, find like-minded people, and grow together.
                 </DisplayText>
-            </div>
+                </DisplayDiv>
             <DisplayForm onSubmit={handleSubmit} >
                 <DisplayText variant="primary" className="mb-4">Hello!</DisplayText>
                 <DisplayText variant="secondary">We are really happy to see you aggain</DisplayText>
@@ -101,7 +102,7 @@ const Login = () => {
                 <SocialButton
                     provider="github"
                     className="mt-4"
-                    onClick={() => // при натисканні на кнопку:
+                    onClick={() =>
                         window.location.href = `https://github.com/login/oauth/authorize?client_id=Ov23liJuqLlwYgqwEX9W&scope=user:email&redirect_uri=http://localhost:5173/auth/github/callback`
                     }
                 />

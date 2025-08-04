@@ -7,6 +7,7 @@ import SocialButton from "../components/SocialButton.tsx";
 import logo from "../assets/img/logo.png";
 import {useNavigate} from "react-router-dom";
 import axios from "axios";
+import DisplayDiv from "../components/DisplayDiv.tsx";
 const Register = () => {
     const [form, setForm] = useState({ username:"",email: "", password: "" });
     const navigate = useNavigate();
@@ -40,7 +41,7 @@ const Register = () => {
     return (
         <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 md:p-8 xl:p-32 bg-[url(./assets/img/bg1.jpg)] bg-cover bg-center">
 
-            <div className=" hidden xl:block flex flex-col max-w-max text-white bg-white/10 rounded-xl p-8 mr-30 shadow-lg backdrop-blur-md border border-white/50 ">
+            <DisplayDiv className={"hidden xl:block flex flex-col max-w-max mr-16"}>
                 <DisplayText variant={"primary"} className={"text-7xl font-bold leading-tight "}>
                     Share yourself
                 </DisplayText>
@@ -50,7 +51,7 @@ const Register = () => {
                     Show the world your ideas and projects.
                     Create a portfolio, find like-minded people, and grow together.
                 </DisplayText>
-            </div>1
+           </DisplayDiv>
             <DisplayForm onSubmit={handleSubmit} >
                 <DisplayText variant="primary" className="mb-4">Hello!</DisplayText>
                 <DisplayText variant="secondary">We are really happy to see you</DisplayText>

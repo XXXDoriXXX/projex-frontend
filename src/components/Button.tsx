@@ -1,7 +1,7 @@
 import React from "react";
 import clsx from "clsx";
 
-type Variant = "primary" | "secondary" | "danger" | "ghost";
+type Variant = "primary" | "secondary" | "danger" | "ghost" | "glass";
 
 type ButtonProps = {
     children: React.ReactNode;
@@ -24,6 +24,15 @@ const variantStyles: Record<Variant, string> = {
     secondary: "bg-gray-700 text-white hover:bg-gray-600 focus:ring-gray-400",
     danger: "bg-red-500 text-white hover:bg-red-400 focus:ring-red-300",
     ghost: "bg-transparent text-white hover:bg-white/10 focus:ring-white/20 border border-white/20",
+    glass: `
+        bg-white/10 backdrop-blur-md 
+        border border-white/20 
+        text-white hover:bg-white/20 
+        hover:shadow-[0_0_20px_rgba(255,255,255,0.2)] 
+        focus:ring-white/30 
+        transition-all duration-300 ease-out
+        hover:scale-110
+    `,
 };
 
 const Button = ({
@@ -41,6 +50,7 @@ const Button = ({
             disabled={disabled}
             className={clsx(
                 baseStyles,
+                "cursor-pointer",
                 variantStyles[variant],
                 disabled && "opacity-50 cursor-not-allowed",
                 className

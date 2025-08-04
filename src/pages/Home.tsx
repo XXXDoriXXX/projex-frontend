@@ -1,16 +1,19 @@
-import logo from '../assets/img/logo.png';
 import { useEffect, useState } from "react";
 import axios from "axios";
+import Button from "../components/Button.tsx";
+import Header from "../components/Header.tsx";
+import DisplayDiv from "../components/DisplayDiv.tsx";
+import ProjectCard from "../components/ProjectCard.tsx";
 
 const Home = () => {
-    const [username, setUsername] = useState<string | null>(null);
+    const [user, setUser] = useState<{ username: string; avatar?: string } | null>(null);
 
     useEffect(() => {
         const rawUser = localStorage.getItem("user");
         if (rawUser) {
             try {
-                const user = JSON.parse(rawUser);
-                setUsername(user?.username || null);
+                const userData = JSON.parse(rawUser);
+                setUser(userData);
             } catch (err) {
                 console.warn("Помилка при парсингу user з localStorage:", err);
             }
@@ -27,63 +30,67 @@ const Home = () => {
                         },
                     }
                 );
-                const user = res.data; // <- просто res.data
-                console.log("Fetched User:", user);
-                localStorage.setItem("user", JSON.stringify(user));
-                setUsername(user?.username || null);
+                const userData = res.data;
+                console.log("Fetched User:", userData);
+                localStorage.setItem("user", JSON.stringify(userData));
+                setUser(userData);
             } catch (err) {
                 console.error("Registration Error:", err);
+                setUser(null);
             }
         };
 
         fetchUser();
     }, []);
 
-
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-300 via-purple-400 to-pink-500 dark:from-neutral-900 dark:via-neutral-800 dark:to-neutral-700 text-center px-6">
+        <div className="min-h-screen flex items-center bg-[url(./assets/img/bg1.jpg)] bg-cover bg-center text-white px-6">
 
-            {/* Лого */}
-            <img
-                src={logo}
-                alt="Projex Logo"
-                className="w-48 h-48 mb-8 drop-shadow-xl animate-spin-slow"
-            />
+            <Header user={user} />
+            <DisplayDiv className={"max-w-9xl w-full flex flex-col md:flex-row justify-between items-center"}>
+                {/* Ліва частина: текст + кнопка */}
+                <div className="flex-1 mb-12 md:mb-0">
+                    <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
+                        Showcase your code. <br /> Connect. <br /> Grow.
+                    </h1>
+                    <p className="text-gray-400 mb-8">
+                        ProjeX is a social network for developers where your projects become your portfolio.
+                    </p>
+                    {!user ? (
+                        <Button variant={"glass"}>Get Started</Button>
+                    ) : (
+                        <Button variant={"primary"} onClick={() => alert("Redirect to projects")}>
+                            Explore Projects
+                        </Button>
+                    )}
+                </div>
 
-            {/* Заголовок */}
-            <h1 className="font-['Bitcount_Prop_Double'] text-8xl sm:text-9xl text-white font-extralight drop-shadow-[0_2px_10px_rgba(0,0,0,0.6)] tracking-wide select-none">
-                {username ? `Привіт, ${username}!` : "Projex"}
-            </h1>
+                {/* Права частина: популярні проекти */}
+                <div className="flex-1 w-full md:w-auto">
+                    <h2 className="text-2xl font-semibold mb-6">Popular Projects</h2>
+                    <div className="space-y-4">
+                        <ProjectCard
+                            title="DevConnector"
+                            tags={["Node.js", "React", "MongoDB"]}
+                            stars={112}
+                        />
+                        <ProjectCard
+                            title="Chat Application"
+                            tags={["TypeScript", "Next.js", "TailwindCSS"]}
+                            stars={89}
+                        />
+                        <ProjectCard
+                            title="Portfolio Website"
+                            tags={["HTML", "CSS", "JavaScript"]}
+                            stars={76}
+                        />
+                    </div>
+                </div>
+            </DisplayDiv>
 
-            {/* Підзаголовок */}
-            <p className="mt-4 text-lg sm:text-xl font-sans text-white/90 max-w-xl">
-                Ласкаво просимо до світу, де кожен проект оживає. <br />
-                Поринь у створення з Projex.
-            </p>
-
-            {/* Кнопка для дії */}
-            <button
-                className="mt-10 bg-white bg-opacity-20 hover:bg-opacity-40 transition rounded-full px-8 py-3 text-white font-semibold shadow-lg backdrop-blur-sm ring-1 ring-white ring-opacity-30 hover:ring-opacity-70"
-                onClick={() => alert('Тут буде редірект, але поки що алерт 😼')}
-            >
-                Почати
-            </button>
-
-            {/* Анімація підпису */}
-            <small className="mt-12 text-white/60 font-mono tracking-widest animate-pulse">
+            <small className="absolute bottom-4 text-white/60 font-mono tracking-widest animate-pulse">
                 Made with ♥ by Котик
             </small>
-
-            {/* Анімація кастомна для повільного обертання лого */}
-            <style>{`
-                @keyframes spin-slow {
-                  from { transform: rotate(0deg); }
-                  to { transform: rotate(360deg); }
-                }
-                .animate-spin-slow {
-                  animation: spin-slow 20s linear infinite;
-                }
-            `}</style>
         </div>
     );
 };
