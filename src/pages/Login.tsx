@@ -5,22 +5,46 @@ import FormInput from "../components/FormInput.tsx";
 import Button from "../components/Button.tsx";
 import SocialButton from "../components/SocialButton.tsx";
 import logo from "../assets/img/logo.png";
+import { GoogleLogin } from '@react-oauth/google';
+import axios from "axios";
+import {useNavigate} from "react-router-dom";
+import DisplayDiv from "../components/DisplayDiv.tsx";
+
 const Login = () => {
     const [form, setForm] = useState({ email: "", password: "" });
-
+    const navigate = useNavigate();
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setForm({ ...form, [e.target.name]: e.target.value });
     };
-
-    const handleSubmit = (e: React.FormEvent) => {
+    type LoginResponse = {
+        token: string;
+    };
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+            if (!form.email || !form.password) {
+                console.error("All fields are required");
+                return;
+            }
+            try {
+                const res = await axios.post<LoginResponse>(
+                    "http://localhost:3000/api/auth/login",
+                    form
+                );
+                const { token } = res.data;
+                localStorage.setItem("token", token);
+                navigate("/");
+            } catch (err) {
+                console.error("Registration Error:", err);
+            }
+
+
         console.log("Login with:", form);
     };
 
     return (
         <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 md:p-8 xl:p-32 bg-[url(./assets/img/bg1.jpg)] bg-cover bg-center">
 
-            <div className=" hidden xl:block flex flex-col max-w-max text-white bg-white/10 rounded-xl p-8 mr-30 shadow-lg backdrop-blur-md border border-white/50 ">
+                <DisplayDiv className={"hidden xl:block flex flex-col max-w-max mr-16"}>
                 <DisplayText variant={"primary"} className={"text-7xl font-bold leading-tight "}>
                     Share yourself
                 </DisplayText>
@@ -30,7 +54,7 @@ const Login = () => {
                     Show the world your ideas and projects.
                     Create a portfolio, find like-minded people, and grow together.
                 </DisplayText>
-            </div>1
+                </DisplayDiv>
             <DisplayForm onSubmit={handleSubmit} >
                 <DisplayText variant="primary" className="mb-4">Hello!</DisplayText>
                 <DisplayText variant="secondary">We are really happy to see you aggain</DisplayText>
@@ -57,13 +81,30 @@ const Login = () => {
                 <DisplayText variant="secondary" className="mt-4">
                     or sign in with
                 </DisplayText>
+                <div className={"mt-4"}>
+                <GoogleLogin
+                    onSuccess={async (credentialResponse) => {
+                        try {
+                            const res = await axios.post('http://localhost:3000/api/auth/google', {
+                                idToken: credentialResponse.credential,
+                            });
+                            const { token } = res.data;
+                            localStorage.setItem('token', token);
+                            navigate("/");
+                        } catch (err) {
+                            console.error('Google Login Error:', err);
+                        }
+                    }}
+                    onError={() => console.log('Login Failed')}
+                    useOneTap
+                />
+                </div>
                 <SocialButton
-                    provider={"google"}
-                    className="mt-4"/>
-                <SocialButton
-                    provider={"github"}
+                    provider="github"
                     className="mt-4"
-                    onClick={()=> console.log("Login with GitHub")}
+                    onClick={() =>
+                        window.location.href = `https://github.com/login/oauth/authorize?client_id=Ov23liJuqLlwYgqwEX9W&scope=user:email&redirect_uri=http://localhost:5173/auth/github/callback`
+                    }
                 />
                 <DisplayText variant="secondary" className="mt-4">
                     Don't have an account? <a href="/register" className="text-blue-300 hover:text-blue-200">Register</a>

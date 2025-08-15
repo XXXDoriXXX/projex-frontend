@@ -7,7 +7,7 @@ type Provider = "google" | "github";
 
 type SocialButtonProps = {
     provider: Provider;
-    onClick?: () => void;
+    onClick?: () => void; // для GitHub або кастомного
     className?: string;
 };
 
@@ -27,9 +27,13 @@ const providerInfo: Record<Provider, { label: string; icon: JSX.Element; bg: str
 const SocialButton = ({ provider, onClick, className = "" }: SocialButtonProps) => {
     const { label, icon, bg } = providerInfo[provider];
 
+    const handleClick = () => {
+            onClick(); // GitHub or others
+    };
+
     return (
         <button
-            onClick={onClick}
+            onClick={handleClick}
             type="button"
             className={clsx(
                 "w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition",
