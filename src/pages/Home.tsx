@@ -1,98 +1,148 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
-import Button from "../components/Button.tsx";
-import Header from "../components/Header.tsx";
-import DisplayDiv from "../components/DisplayDiv.tsx";
-import ProjectCard from "../components/ProjectCard.tsx";
+import { useState, useEffect } from "react";
+import Button from "../components/Button";
+import Header from "../components/Header";
+import DarkVeil from "../components/DarkVeil/DarkVeil.tsx";
+import BlurText from "../components/TextAnimations/BlurText/BlurText.tsx";
+import ShinyText from "../components/TextAnimations/ShinyText/ShinyText.tsx";
+import TextType from "../components/TextAnimations/TextType/TextType.tsx";
+import MagicBento from "../components/Components/MagicBento/MagicBento.tsx";
+import { MotionEffect } from "../components/Animations/Motion/Motion-effect.tsx";
+
+import {getUser} from "../hooks/getUser.ts";
 
 const Home = () => {
-    const [user, setUser] = useState<{ username: string; avatar?: string } | null>(null);
-
+    const [user, setUser] = useState<{ id: string; username: string; email: string; avatarUrl: string } | null>(null);
     useEffect(() => {
-        const rawUser = localStorage.getItem("user");
-        if (rawUser) {
-            try {
-                const userData = JSON.parse(rawUser);
-                setUser(userData);
-            } catch (err) {
-                console.warn("Помилка при парсингу user з localStorage:", err);
-            }
-        }
-
-        const fetchUser = async () => {
-            try {
-                const res = await axios.post(
-                    "http://localhost:3000/api/auth/me",
-                    {},
-                    {
-                        headers: {
-                            Authorization: `Bearer ${localStorage.getItem("token")}`,
-                        },
-                    }
-                );
-                const userData = res.data;
-                console.log("Fetched User:", userData);
-                localStorage.setItem("user", JSON.stringify(userData));
-                setUser(userData);
-            } catch (err) {
-                console.error("Registration Error:", err);
-                setUser(null);
-            }
-        };
-
-        fetchUser();
+       const fetchUser = async () => {
+           const userData = await getUser();
+              setUser(userData ?? null);
+              if(userData){
+                    console.log("User data fetched:", userData);
+                    localStorage.setItem("user", JSON.stringify(userData));
+              }
+       }
+       fetchUser()
     }, []);
 
+    const handleAnimationComplete = () => {
+        console.log('Animation completed!');
+    };
+
     return (
-        <div className="min-h-screen flex items-center bg-[url(./assets/img/bg1.jpg)] bg-cover bg-center text-white px-6">
+        <div className="relative min-h-screen text-white flex flex-col items-center overflow-hidden">
 
+            {/* HEADER */}
             <Header user={user} />
-            <DisplayDiv className={"max-w-9xl w-full flex flex-col md:flex-row justify-between items-center"}>
-                {/* Ліва частина: текст + кнопка */}
-                <div className="flex-1 mb-12 md:mb-0">
-                    <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
-                        Showcase your code. <br /> Connect. <br /> Grow.
-                    </h1>
-                    <p className="text-gray-400 mb-8">
-                        ProjeX is a social network for developers where your projects become your portfolio.
-                    </p>
-                    {!user ? (
-                        <Button variant={"glass"}>Get Started</Button>
-                    ) : (
-                        <Button variant={"primary"} onClick={() => alert("Redirect to projects")}>
-                            Explore Projects
-                        </Button>
-                    )}
+
+            {/* HERO SECTION */}
+            <section id="Hero" className="relative w-full h-screen flex flex-col justify-center items-center">
+                <div className="absolute inset-0 -z-10">
+                    <DarkVeil />
                 </div>
 
-                {/* Права частина: популярні проекти */}
-                <div className="flex-1 w-full md:w-auto">
-                    <h2 className="text-2xl font-semibold mb-6">Popular Projects</h2>
-                    <div className="space-y-4">
-                        <ProjectCard
-                            title="DevConnector"
-                            tags={["Node.js", "React", "MongoDB"]}
-                            stars={112}
-                        />
-                        <ProjectCard
-                            title="Chat Application"
-                            tags={["TypeScript", "Next.js", "TailwindCSS"]}
-                            stars={89}
-                        />
-                        <ProjectCard
-                            title="Portfolio Website"
-                            tags={["HTML", "CSS", "JavaScript"]}
-                            stars={76}
-                        />
-                    </div>
-                </div>
-            </DisplayDiv>
+                <div className="max-w-6/10 w-full flex flex-col md:flex-row justify-center items-center pr-0 pl-0">
+                    {/* Ліва частина */}
+                    <MotionEffect slide={{ direction: 'down' }} fade zoom inView delay={0.05}>
+                        <div className="flex-1 flex flex-col items-center justify-center text-center">
+                            <BlurText
+                                text={`Build amazing projects.\nShare with the world.\nLevel up your skills.`}
+                                delay={50}
+                                animateBy="words"
+                                direction="top"
+                                onAnimationComplete={handleAnimationComplete}
+                                className="text-5xl md:text-6xl font-bold mb-6 leading-tight text-shadow-pink-500"
+                            />
 
-            <small className="absolute bottom-4 text-white/60 font-mono tracking-widest animate-pulse">
+                            <TextType
+                                text={["ProjeX", "It's a network for developers", "where your projects are your calling card."]}
+                                typingSpeed={75}
+                                pauseDuration={1500}
+                                showCursor={true}
+                                cursorCharacter="|"
+                                textColors={["#c2c2c2", "#949494", "#949494"]}
+                                className="mb-8 font-semibold tracking-wide mt-8"
+                            />
+
+                            <MotionEffect slide={{ direction: 'down' }} fade zoom inView delay={0.1}>
+                                <div className="flex gap-8 flex-wrap mt-8">
+                                    {!user && <Button variant="glass">Sign Up</Button>}
+                                    {user && (
+                                        <>
+                                            <Button variant="primary" className="text-xl">Explore Projects</Button>
+                                            <Button variant="glass">
+                                                <ShinyText text="Create a new project!" disabled={false} speed={3} className="text-xl" />
+                                            </Button>
+                                        </>
+                                    )}
+                                </div>
+                            </MotionEffect>
+                        </div>
+                    </MotionEffect>
+
+                    {/* Права частина */}
+                    <MotionEffect slide={{ direction: 'down' }} fade zoom inView delay={0.1}>
+                        <div className="flex-1 flex justify-end">
+
+                        </div>
+                    </MotionEffect>
+                </div>
+            </section>
+
+
+            {/* SHOWCASE SECTION */}
+            <section id="Showcase" className="w-full min-h-screen bg-gradient-to-b from-[#000000] to-[#0a0016] flex justify-center items-center px-8 py-20">
+                <MotionEffect slide={{ direction: 'down' }} fade zoom inView delay={0.05}>
+                    <MagicBento
+                        textAutoHide={true}
+                        enableStars={true}
+                        enableSpotlight={true}
+                        enableBorderGlow={true}
+                        enableTilt={true}
+                        enableMagnetism={true}
+                        clickEffect={true}
+                        spotlightRadius={300}
+                        particleCount={12}
+                        glowColor="132, 0, 255"
+                    />
+                </MotionEffect>
+            </section>
+
+            {/* FEATURES SECTION */}
+            <section id="Features" className="w-full min-h-screen bg-gradient-to-b from-[#0a0016] to-[#060010] flex flex-col justify-center items-center px-8 py-20">
+                <h2 className="text-4xl font-bold mb-12">Why choose ProjeX?</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-6xl">
+                    <FeatureCard title="Build Fast" desc="Use our tools to speed up your development process." />
+                    <FeatureCard title="Showcase Skills" desc="Create an online portfolio that speaks for you." />
+                    <FeatureCard title="Find Collaborators" desc="Work with other talented developers worldwide." />
+                </div>
+            </section>
+
+            {/* COMMUNITY SECTION */}
+            <section id="Community" className="w-full min-h-screen bg-gradient-to-b from-[#060010] to-[#050010] flex flex-col justify-center items-center px-8 py-20">
+                <h2 className="text-4xl font-bold mb-12">Join our growing community</h2>
+                <p className="text-lg text-white/70 max-w-2xl text-center">Over <span className="font-bold">10,000+</span> developers already use ProjeX to share their work and connect with others.</p>
+            </section>
+
+            {/* CTA SECTION */}
+            <section id="CTA" className="w-full min-h-[50vh] bg-gradient-to-b from-[#050010] to-[#040010] flex flex-col justify-center items-center px-8 py-20">
+                <h2 className="text-3xl font-bold mb-6">Ready to showcase your projects?</h2>
+                <Button variant="glass" className="text-xl">Join Now</Button>
+            </section>
+
+            {/* FOOTER */}
+            <footer id="Footer" className="w-full bg-gradient-to-b from-[#040010] to-[#060010] text-white/60 text-center py-4 text-sm font-mono tracking-widest">
                 Made with ♥ by Котик
-            </small>
+            </footer>
         </div>
     );
 };
+
+// Simple feature card component
+const FeatureCard = ({ title, desc }: { title: string; desc: string }) => (
+    <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-center hover:bg-white/10 transition">
+        <h3 className="text-xl font-semibold mb-4">{title}</h3>
+        <p className="text-white/70">{desc}</p>
+    </div>
+);
 
 export default Home;

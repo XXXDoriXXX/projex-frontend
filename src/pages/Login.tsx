@@ -83,7 +83,6 @@ const Login = () => {
                 </DisplayText>
                 <div className={"mt-4"}>
                 <GoogleLogin
-
                     onSuccess={async (credentialResponse) => {
                         try {
                             const res = await axios.post('http://localhost:3000/api/auth/google', {
@@ -91,6 +90,7 @@ const Login = () => {
                             });
                             const { token } = res.data;
                             localStorage.setItem('token', token);
+                            navigate("/");
                         } catch (err) {
                             console.error('Google Login Error:', err);
                         }

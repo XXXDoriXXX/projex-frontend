@@ -12,7 +12,24 @@ input[type='password']::-webkit-credentials-auto-fill-button,
 input[type='password']::-webkit-reveal-password-button {
     display: none;
 }
-
+@keyframes shine {
+    0% { background-position: 100%; }
+    100% { background-position: -100%; }
+}
 input[type='password']::-webkit-textfield-decoration-container {
     display: none !important;
+}
+
+.glow-pulse {
+    transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    animation: glow-pulse 3s ease-in-out infinite alternate;
+}
+
+@keyframes glow-pulse {
+    0% {
+        filter: drop-shadow(0 0 0px rgba(124, 58, 237, 0.6));
+    }
+    100% {
+        filter: drop-shadow(0 0 20px rgba(124, 58, 237, 1));
+    }
 }

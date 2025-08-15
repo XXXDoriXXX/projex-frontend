@@ -8,6 +8,7 @@ import logo from "../assets/img/logo.png";
 import {useNavigate} from "react-router-dom";
 import axios from "axios";
 import DisplayDiv from "../components/DisplayDiv.tsx";
+import {GoogleLogin} from "@react-oauth/google";
 const Register = () => {
     const [form, setForm] = useState({ username:"",email: "", password: "" });
     const navigate = useNavigate();
@@ -86,13 +87,30 @@ const Register = () => {
                 <DisplayText variant="secondary" className="mt-4">
                     or sign up with
                 </DisplayText>
+                <div className={"mt-4"}>
+                    <GoogleLogin
+                        onSuccess={async (credentialResponse) => {
+                            try {
+                                const res = await axios.post('http://localhost:3000/api/auth/google', {
+                                    idToken: credentialResponse.credential,
+                                });
+                                const { token } = res.data;
+                                localStorage.setItem('token', token);
+                                navigate("/");
+                            } catch (err) {
+                                console.error('Google Login Error:', err);
+                            }
+                        }}
+                        onError={() => console.log('Login Failed')}
+                        useOneTap
+                    />
+                </div>
                 <SocialButton
-                    provider={"google"}
-                    className="mt-4"/>
-                <SocialButton
-                    provider={"github"}
+                    provider="github"
                     className="mt-4"
-                    onClick={()=> console.log("Register with GitHub")}
+                    onClick={() =>
+                        window.location.href = `https://github.com/login/oauth/authorize?client_id=Ov23liJuqLlwYgqwEX9W&scope=user:email&redirect_uri=http://localhost:5173/auth/github/callback`
+                    }
                 />
                 <DisplayText variant="secondary" className="mt-4">
                     Already have an account? <a href="/login" className="text-blue-300 hover:text-blue-200">Login</a>
