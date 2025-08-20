@@ -14,7 +14,6 @@ const DisplayDiv = ({ children, className = "" }: DisplayDivProps) => {
                 backdrop-blur-md 
                 border border-white/30
                 rounded-3xl 
-                p-8 
                 shadow-2xl 
                 transition-all 
                 duration-700 

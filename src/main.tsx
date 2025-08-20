@@ -1,13 +1,15 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css";
-import {BrowserRouter} from "react-router-dom";
-import App from "./App.tsx";
-document.documentElement.classList.add('dark');
+import { RouterProvider } from "react-router-dom";
+import { router } from "./router";
+import {Provider} from "react-redux";
+import {setupStore} from "./store.ts";
+const store = setupStore();
 ReactDOM.createRoot(document.getElementById("root")!).render(
     <React.StrictMode>
-        <BrowserRouter>
-            <App />
-        </BrowserRouter>
+        <Provider store={store}>
+            <RouterProvider router={router} />
+        </Provider>
     </React.StrictMode>
 );

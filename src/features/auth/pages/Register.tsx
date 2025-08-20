@@ -1,13 +1,13 @@
 import { useState } from "react";
-import DisplayText from "../components/DisplayText.tsx";
-import DisplayForm from "../components/DisplayForm.tsx";
-import FormInput from "../components/FormInput.tsx";
-import Button from "../components/Button.tsx";
-import SocialButton from "../components/SocialButton.tsx";
-import logo from "../assets/img/logo.png";
+import DisplayText from "../../../components/DisplayText.tsx";
+import DisplayForm from "../../../components/DisplayForm.tsx";
+import FormInput from "../../../components/FormInput.tsx";
+import Button from "../../../components/Button.tsx";
+import SocialButton from "../../../components/SocialButton.tsx";
+import logo from "../../../assets/img/logo.png";
 import {useNavigate} from "react-router-dom";
 import axios from "axios";
-import DisplayDiv from "../components/DisplayDiv.tsx";
+import DisplayDiv from "../../../components/DisplayDiv.tsx";
 import {GoogleLogin} from "@react-oauth/google";
 const Register = () => {
     const [form, setForm] = useState({ username:"",email: "", password: "" });
@@ -113,7 +113,7 @@ const Register = () => {
                     }
                 />
                 <DisplayText variant="secondary" className="mt-4">
-                    Already have an account? <a href="/login" className="text-blue-300 hover:text-blue-200">Login</a>
+                    Already have an account? <a href="/src/features/auth/pages/Login" className="text-blue-300 hover:text-blue-200">Login</a>
                 </DisplayText>
             </DisplayForm>
         </div>

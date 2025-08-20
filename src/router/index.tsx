@@ -1,21 +1,27 @@
-// router/index.tsx
 import { createBrowserRouter } from "react-router-dom";
-import Login from "../pages/Login.tsx";
-import Register from "../pages/Register.tsx";
-import Code from "../pages/Code.tsx";
+import Home from "../features/home/pages/Home.tsx";
+import Login from "../features/auth/pages/Login.tsx";
+import Register from "../features/auth/pages/Register.tsx";
 import GithubCallback from "../features/auth/GithubCallback.tsx";
+import AppLayout from "../AppLayout.tsx";
+import AuthLayout from "../AuthLayout.tsx";
 
 export const router = createBrowserRouter([
-    //{ path: "/", element: <Home /> },
-    { path: "/login", element: <Login /> },
-    { path: "/register", element: <Register /> },
-    { path: "/code", element: <Code /> },
-    { path: "/auth/github/callback", element: <GithubCallback  /> },
-    //{ path: "/projects", element: <Projects /> },
-    //{ path: "/projects/:id", element: <ProjectDetail /> },
-    //{ path: "/dashboard", element: <Dashboard /> },
-    //{ path: "/dashboard/create", element: <CreateProject /> },
-    //{ path: "/dashboard/edit/:id", element: <EditProject /> },
-    //{ path: "/profile/:userId", element: <Profile /> },
-    //{ path: "*", element: <NotFound /> },
+    {
+        path: "/",
+        element: <AppLayout />,
+        children: [
+            { path: "/", element: <Home /> },
+
+        ],
+    },
+    {
+        path: "/auth",
+        element: <AuthLayout />,
+        children: [
+            { path: "login", element: <Login /> },
+            { path: "register", element: <Register /> },
+            { path: "github/callback", element: <GithubCallback /> },
+        ]
+    },
 ]);

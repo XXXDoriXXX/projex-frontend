@@ -1,29 +1,15 @@
-import { useState, useEffect } from "react";
-import Button from "../components/Button";
-import Header from "../components/Header";
-import DarkVeil from "../components/DarkVeil/DarkVeil.tsx";
-import BlurText from "../components/TextAnimations/BlurText/BlurText.tsx";
-import ShinyText from "../components/TextAnimations/ShinyText/ShinyText.tsx";
-import TextType from "../components/TextAnimations/TextType/TextType.tsx";
-import MagicBento from "../components/Components/MagicBento/MagicBento.tsx";
-import { MotionEffect } from "../components/Animations/Motion/Motion-effect.tsx";
+import Button from "../../../components/Button.tsx";
+import DarkVeil from "../../../components/DarkVeil/DarkVeil.tsx";
+import BlurText from "../../../components/TextAnimations/BlurText/BlurText.tsx";
+import ShinyText from "../../../components/TextAnimations/ShinyText/ShinyText.tsx";
+import TextType from "../../../components/TextAnimations/TextType/TextType.tsx";
+import MagicBento from "../../../components/Components/MagicBento/MagicBento.tsx";
+import { MotionEffect } from "../../../components/Animations/Motion/Motion-effect.tsx";
+import {userAPI} from "../../auth/services/UserService.ts";
 
-import {getUser} from "../hooks/getUser.ts";
 
 const Home = () => {
-    const [user, setUser] = useState<{ id: string; username: string; email: string; avatarUrl: string } | null>(null);
-    useEffect(() => {
-       const fetchUser = async () => {
-           const userData = await getUser();
-              setUser(userData ?? null);
-              if(userData){
-                    console.log("User data fetched:", userData);
-                    localStorage.setItem("user", JSON.stringify(userData));
-              }
-       }
-       fetchUser()
-    }, []);
-
+    const { data: user, isLoading, error } = userAPI.useFetchUserQuery();
     const handleAnimationComplete = () => {
         console.log('Animation completed!');
     };
@@ -31,12 +17,10 @@ const Home = () => {
     return (
         <div className="relative min-h-screen text-white flex flex-col items-center overflow-hidden">
 
-            {/* HEADER */}
-            <Header user={user} />
 
             {/* HERO SECTION */}
             <section id="Hero" className="relative w-full h-screen flex flex-col justify-center items-center">
-                <div className="absolute inset-0 -z-10">
+                <div className="absolute inset-0 -z-100">
                     <DarkVeil />
                 </div>
 
