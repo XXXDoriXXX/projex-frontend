@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import DisplayText from "../components/DisplayText.tsx";
-import DisplayForm from "../components/DisplayForm.tsx";
-import Button from "../components/Button.tsx";
-import OTPInput from "../components/OTPInput.tsx";
+import DisplayText from "../../../components/DisplayText.tsx";
+import DisplayForm from "../../../components/DisplayForm.tsx";
+import Button from "../../../components/Button.tsx";
+import OTPInput from "../../../components/OTPInput.tsx";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 

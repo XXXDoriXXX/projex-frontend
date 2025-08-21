@@ -5,25 +5,18 @@ import Button from "./Button.tsx";
 import { useNavigate } from "react-router-dom";
 import {MotionEffect} from "./Animations/Motion/Motion-effect.tsx";
 
-type User = {
-    username: string;
-    avatarUrl?: string;
-};
-
-type HeaderProps = {
-    user: User | null;
-};
+import {userAPI} from "../features/auth/services/UserService.ts";
 
 const navItems = ["Feed", "Explore", "Profile", "Notifications"];
 
-const Header = ({ user }: HeaderProps) => {
+const Header = () => {
+    const { data: user} = userAPI.useFetchUserQuery();
     const navigate = useNavigate();
-    const [active, setActive] = useState("Feed"); // поточна вкладка
+    const [active, setActive] = useState("Feed");
     const [hovered, setHovered] = useState<string | null>(null);
     const [highlightProps, setHighlightProps] = useState({ left: 0, width: 0 });
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Функція для оновлення позиції "highlight"
     const updateHighlight = (label: string) => {
         const container = containerRef.current;
         if (!container) return;
@@ -70,7 +63,7 @@ const Header = ({ user }: HeaderProps) => {
                 >
                     {/* Highlight */}
                     <motion.div
-                        className="absolute top-1/2 -translate-y-1/2 h-8 rounded-full bg-white/3 p-6 backdrop-blur-xl drop-shadow-lg transition-transform duration-500  shadow-lg z-0 border border-white/20 inset-shadow-sm inset-shadow-indigo-300 "
+                        className="absolute top-1/2 -translate-y-1/2 h-8 rounded-full bg-white/30 p-6 blur-md  transition-transform duration-500 z-0 inset-shadow-sm "
                         animate={{
                             left: highlightProps.left,
                             width: highlightProps.width,
@@ -127,7 +120,7 @@ const Header = ({ user }: HeaderProps) => {
 
                         </>
                     ) : (
-                        <Button className={""} variant="glass" onClick={() => navigate("/login") }>
+                        <Button className={""} variant="glass" onClick={() => navigate("/auth/login") }>
                             Sign in
                         </Button>
                     )}

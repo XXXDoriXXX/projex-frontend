@@ -1,45 +1,54 @@
 import { useState } from "react";
-import DisplayText from "../components/DisplayText.tsx";
-import DisplayForm from "../components/DisplayForm.tsx";
-import FormInput from "../components/FormInput.tsx";
-import Button from "../components/Button.tsx";
-import SocialButton from "../components/SocialButton.tsx";
-import logo from "../assets/img/logo.png";
+import DisplayText from "../../../components/DisplayText.tsx";
+import DisplayForm from "../../../components/DisplayForm.tsx";
+import FormInput from "../../../components/FormInput.tsx";
+import Button from "../../../components/Button.tsx";
+import SocialButton from "../../../components/SocialButton.tsx";
+import logo from "../../../assets/img/logo.png";
 import { GoogleLogin } from '@react-oauth/google';
 import axios from "axios";
 import {useNavigate} from "react-router-dom";
-import DisplayDiv from "../components/DisplayDiv.tsx";
+import DisplayDiv from "../../../components/DisplayDiv.tsx";
+import {authAPI} from "../services/AuthService.ts";
+import Loading from "../../../components/Loading.tsx";
+import ErrorMessage from "../../../components/ErrorMessage.tsx";
 
 const Login = () => {
     const [form, setForm] = useState({ email: "", password: "" });
+    const [login, { data, isLoading, error }] = authAPI.useFetchAuthMutation();
     const navigate = useNavigate();
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setForm({ ...form, [e.target.name]: e.target.value });
     };
-    type LoginResponse = {
-        token: string;
-    };
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-            if (!form.email || !form.password) {
-                console.error("All fields are required");
+
+        if (!form.email || !form.password) {
+            console.error("All fields are required");
+            return;
+        }
+
+        try {
+            const result = await login({
+                email: form.email,
+                password: form.password,
+            }).unwrap();
+
+            const token = result.token;
+            if (!token) {
+                console.error("No token received");
                 return;
             }
-            try {
-                const res = await axios.post<LoginResponse>(
-                    "http://localhost:3000/api/auth/login",
-                    form
-                );
-                const { token } = res.data;
-                localStorage.setItem("token", token);
-                navigate("/");
-            } catch (err) {
-                console.error("Registration Error:", err);
-            }
 
+            localStorage.setItem("token", token);
+            navigate("/");
+        } catch (error) {
+            console.error("Login Error:", error);
+        }
 
         console.log("Login with:", form);
     };
+
 
     return (
         <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 md:p-8 xl:p-32 bg-[url(./assets/img/bg1.jpg)] bg-cover bg-center">
@@ -76,6 +85,11 @@ const Login = () => {
                     className="mb-6 mt-2"
 
                 />
+                {isLoading && <Loading message="Logging in..." />}
+                {error && <ErrorMessage error={error} defaultMessage="Invalid credentials" />}
+
+
+
                 <Button variant={"primary"} type={"submit"} className={"w-full"}>Login</Button>
 
                 <DisplayText variant="secondary" className="mt-4">
