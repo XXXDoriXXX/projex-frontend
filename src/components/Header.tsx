@@ -4,8 +4,7 @@ import logo from "../assets/img/logo.png";
 import Button from "./Button.tsx";
 import { useNavigate } from "react-router-dom";
 import {MotionEffect} from "./Animations/Motion/Motion-effect.tsx";
-import {useSelector} from "react-redux";
-import type {RootState} from "../store.ts";
+
 import {userAPI} from "../features/auth/services/UserService.ts";
 
 const navItems = ["Feed", "Explore", "Profile", "Notifications"];
