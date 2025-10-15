@@ -15,7 +15,7 @@ import ErrorMessage from "../../../components/ErrorMessage.tsx";
 
 const Login = () => {
     const [form, setForm] = useState({ email: "", password: "" });
-    const [login, { data, isLoading, error }] = authAPI.useFetchAuthMutation();
+    const [login, { isLoading, error }] = authAPI.useFetchAuthMutation();
     const navigate = useNavigate();
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setForm({ ...form, [e.target.name]: e.target.value });
@@ -117,7 +117,7 @@ const Login = () => {
                     provider="github"
                     className="mt-4"
                     onClick={() =>
-                        window.location.href = `https://github.com/login/oauth/authorize?client_id=Ov23liJuqLlwYgqwEX9W&scope=user:email&redirect_uri=http://localhost:5173/auth/github/callback`
+                        window.location.href = `https://github.com/login/oauth/authorize?client_id=Ov23liJuqLlwYgqwEX9W&scope=user:email&redirect_uri=http://localhost:5173/auth/github`
                     }
                 />
                 <DisplayText variant="secondary" className="mt-4">

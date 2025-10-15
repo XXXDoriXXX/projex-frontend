@@ -9,7 +9,7 @@ import {userAPI} from "../../auth/services/UserService.ts";
 
 
 const Home = () => {
-    const { data: user, isLoading, error } = userAPI.useFetchUserQuery();
+    const { data: user } = userAPI.useFetchUserQuery();
     const handleAnimationComplete = () => {
         console.log('Animation completed!');
     };
