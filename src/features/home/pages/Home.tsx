@@ -5,11 +5,10 @@ import ShinyText from "../../../components/TextAnimations/ShinyText/ShinyText.ts
 import TextType from "../../../components/TextAnimations/TextType/TextType.tsx";
 import MagicBento from "../../../components/Components/MagicBento/MagicBento.tsx";
 import { MotionEffect } from "../../../components/Animations/Motion/Motion-effect.tsx";
-import {userAPI} from "../../auth/services/UserService.ts";
+
 
 
 const Home = () => {
-    const { data: user } = userAPI.useFetchUserQuery();
     const handleAnimationComplete = () => {
         console.log('Animation completed!');
     };
@@ -49,15 +48,13 @@ const Home = () => {
 
                             <MotionEffect slide={{ direction: 'down' }} fade zoom inView delay={0.1}>
                                 <div className="flex gap-8 flex-wrap mt-8">
-                                    {!user && <Button variant="glass">Sign Up</Button>}
-                                    {user && (
+
                                         <>
                                             <Button variant="primary" className="text-xl">Explore Projects</Button>
                                             <Button variant="glass">
                                                 <ShinyText text="Create a new project!" disabled={false} speed={3} className="text-xl" />
                                             </Button>
                                         </>
-                                    )}
                                 </div>
                             </MotionEffect>
                         </div>
