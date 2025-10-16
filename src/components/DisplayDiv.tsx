@@ -10,7 +10,7 @@ const DisplayDiv = ({ children, className = "" }: DisplayDivProps) => {
     return (
         <div
             className={`
-                bg-[rgba(6,0,16,0.25)]
+             
                 backdrop-blur-md 
                 border border-white/30
                 rounded-3xl 
@@ -18,10 +18,10 @@ const DisplayDiv = ({ children, className = "" }: DisplayDivProps) => {
                 transition-all 
                 duration-700 
                 ease-out 
-               
                 hover:shadow-glow 
                 animate-fade-in 
                 ${className}
+                bg-[rgba(6,0,16,1)]
             `}
         >
             {children}

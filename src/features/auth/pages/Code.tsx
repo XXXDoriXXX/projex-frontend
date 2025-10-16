@@ -32,7 +32,14 @@ const Code = () => {
             return;
         }
         try {
-            await axios.post(`http://localhost:3000/api/auth/verify-email/${code}`);
+            const token = localStorage.getItem("token");
+            console.log("Resending verification code with token:", token);
+            if (!token) {
+                throw new Error("No token found");
+            }
+            await axios.post(`http://localhost:3000/api/auth/verify-email/${code}` ,{}, {headers: {
+                    Authorization: `Bearer ${token}`,
+                },}, );
             navigate("/");
         } catch (err) {
             console.error("Verification Error:", err);
@@ -45,7 +52,7 @@ const Code = () => {
         setIsResending(true);
         try {
             const token = localStorage.getItem("token");
-
+            console.log("Resending verification code with token:", token);
             if (!token) {
                 throw new Error("No token found");
             }

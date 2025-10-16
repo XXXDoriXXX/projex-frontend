@@ -24,7 +24,13 @@ input[type='password']::-webkit-textfield-decoration-container {
     transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     animation: glow-pulse 3s ease-in-out infinite alternate;
 }
-
+.scrollbar-hide {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
 @keyframes glow-pulse {
     0% {
         filter: drop-shadow(0 0 0px rgba(124, 58, 237, 0.6));

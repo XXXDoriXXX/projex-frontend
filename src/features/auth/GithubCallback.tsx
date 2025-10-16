@@ -18,7 +18,7 @@ const GithubCallback = () => {
 
         const exchangeCodeForToken = async () => {
             try {
-                const res = await axios.get(`http://localhost:3000/api/auth/github/callback?code=${code}`);
+                const res = await axios.get(`http://localhost:3000/api/auth/github?code=${code}`);
                 const { token } = res.data;
                 localStorage.setItem("token", token);
                 navigate("/");
