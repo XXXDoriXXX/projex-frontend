@@ -8,6 +8,7 @@ import AuthLayout from "../AuthLayout.tsx";
 import CreateProject from "../features/project/pages/CreateProject.tsx";
 import Code from "../features/auth/pages/Code.tsx";
 import Profile from "../features/profile/pages/Profile.tsx";
+import ProjectLayout from "../ProjectLayout.tsx";
 
 export const router = createBrowserRouter([
     {
@@ -15,9 +16,15 @@ export const router = createBrowserRouter([
         element: <AppLayout />,
         children: [
             { path: "/", element: <Home /> },
-            { path: "/project/create", element: <CreateProject/> },
             {path: "/profile/:username", element: <Profile/>},
 
+        ],
+    },
+    {
+        path: "/project",
+        element: <ProjectLayout />,
+        children: [
+            { path: "create", element: <CreateProject/> },
         ],
     },
     {
