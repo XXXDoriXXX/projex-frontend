@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, {useState, useEffect, useRef, useMemo} from "react";
 import Button from "../../../components/Button.tsx";
 import { Input } from "../../../components/input.tsx";
 import { Label } from "../../../components/label.tsx";
@@ -26,6 +26,12 @@ import {
     Users,
     Video, X
 } from "lucide-react";
+import {useCreateProjectMutation, useGetTechnologiesQuery} from "../api/projectApi.ts";
+import Loading from "../../../components/Loading.tsx";
+import ErrorMessage from "../../../components/ErrorMessage.tsx";
+import {useNavigate} from "react-router-dom";
+import {useSelector} from "react-redux";
+import type {RootState} from "../../../store.ts";
 interface CreateProjectPageProps {
     onNavigateBack?: () => void;
 }
@@ -55,7 +61,10 @@ const steps = [
     { id: 'team' as ProjectStep, title: 'Команда', icon: Users, description: 'Співавтори' },
     { id: 'review' as ProjectStep, title: 'Перегляд', icon: Rocket, description: 'Публікація' }
 ];
-
+interface SelectedTechnology {
+    id: string;
+    name: string;
+}
 export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
     const [currentStep, setCurrentStep] = useState<ProjectStep>('basics');
     const [projectName, setProjectName] = useState('');
@@ -69,10 +78,51 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
     const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
     const [collaboratorEmail, setCollaboratorEmail] = useState('');
     const [showMarkdownPreview, setShowMarkdownPreview] = useState(false);
-
+    const navigate = useNavigate();
     const currentStepIndex = steps.findIndex(s => s.id === currentStep);
     const progress = ((currentStepIndex + 1) / steps.length) * 100;
+    const userId = useSelector((state: RootState) => state.auth.user?.id || 'TEST_USER_ID');
+    const [selectedTechnologies, setSelectedTechnologies] = useState<SelectedTechnology[]>([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const { data: allTechnologies = [], isLoading: isTechLoading } = useGetTechnologiesQuery();
+    const handleAddTechnology = (tech: SelectedTechnology) => {
+        if (!selectedTechnologies.find(t => t.id === tech.id)) {
+            setSelectedTechnologies([...selectedTechnologies, tech]);
+            setTechInput('');
+            setShowSuggestions(false);
+        }
+    };
+    const handleRemoveTechnology = (techId: string) => {
+        setSelectedTechnologies(selectedTechnologies.filter(t => t.id !== techId));
+    };
 
+    const handleTechInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setTechInput(e.target.value);
+        setShowSuggestions(true);
+    };
+    const filteredSuggestions = React.useMemo(() => {
+        const input = techInput.toLowerCase();
+
+        const unselectedTechnologies = allTechnologies
+            .filter(tech => !selectedTechnologies.find(t => t.id === tech.id));
+
+        const startsWith = unselectedTechnologies.filter(tech =>
+            tech.name.toLowerCase().startsWith(input)
+        );
+
+        const contains = unselectedTechnologies.filter(tech =>
+            tech.name.toLowerCase().includes(input) &&
+            !tech.name.toLowerCase().startsWith(input)
+        );
+        const sortedResults = [...startsWith, ...contains];
+
+        return sortedResults.slice(0, 5);
+
+    }, [techInput, allTechnologies, selectedTechnologies]);
+    const [
+        createProject,
+        { isLoading: isSubmitting, isError: submitError, isSuccess: submitSuccess, error: submitErrorData }
+    ] = useCreateProjectMutation();
     const handleAddGithubLink = () => {
         setGithubLinks([...githubLinks, '']);
     };
@@ -89,23 +139,6 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
         setGithubLinks(newLinks);
     };
 
-    const handleAddTechnology = () => {
-        if (techInput.trim() && !technologies.includes(techInput.trim())) {
-            setTechnologies([...technologies, techInput.trim()]);
-            setTechInput('');
-        }
-    };
-
-    const handleRemoveTechnology = (tech: string) => {
-        setTechnologies(technologies.filter(t => t !== tech));
-    };
-
-    const handleTechKeyPress = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            handleAddTechnology();
-        }
-    };
 
     const handleFileUpload = (type: 'image' | 'video') => {
         const newFile: MediaFile = {
@@ -166,18 +199,6 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
         }
     };
 
-    const handleSubmit = () => {
-        console.log('Project submitted:', {
-            projectName,
-            visibility,
-            githubLinks: githubLinks.filter(link => link.trim()),
-            deploymentLink,
-            description,
-            technologies,
-            mediaFiles,
-            collaborators
-        });
-    };
 
     const renderMarkdown = (text: string) => {
         const html = text
@@ -214,8 +235,40 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                 return true;
         }
     };
-
-
+    useEffect(() => {
+        if (submitSuccess && !isSubmitting) {
+            alert("Проект успішно опубліковано!");
+            navigate(`/user/${userId}`);
+        }
+    }, [submitSuccess, isSubmitting, navigate, userId]);
+    const projectData = useMemo(() => {
+        return {
+            userId: userId,
+            title: projectName,
+            description: description,
+            githubUrl: githubLinks.filter(link => link.trim()).join(','),
+            demoUrl: deploymentLink,
+            technologies: selectedTechnologies.map(tech => tech.id),
+            media: mediaFiles.map(file => ({
+                url: file.url,
+                type: file.type,
+                isMain: file.isMain
+            })),
+        };
+    }, [
+        userId, projectName, description, githubLinks, deploymentLink,
+        selectedTechnologies, mediaFiles
+    ]);
+    const handleSubmit = async () => {
+        try {
+            // Викликаємо RTK Query мутацію
+            await createProject(projectData);
+            // Успіх буде оброблено в useEffect
+        } catch (error) {
+            // Помилка буде оброблена в submitErrorData
+            console.error("Submission failed:", error);
+        }
+    };
     return (
         <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-cyan-500/10" />
@@ -343,6 +396,17 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
 
                         {/* Step Content */}
                         <div className="bg-card/50 backdrop-blur-2xl border border-border/50 rounded-3xl p-8 shadow-2xl min-h-[600px] flex flex-col">
+                            {/* Відображення помилок та завантаження */}
+                            {isSubmitting && <Loading fullScreen text="Публікація проекту..." />}
+                            {submitError && (
+                                <ErrorMessage
+                                    fullScreen
+                                    title="Помилка публікації"
+                                    message={(submitErrorData as any)?.data?.message || "Не вдалося створити проект. Спробуйте пізніше."}
+                                    onDismiss={() => { /* Можна додати логіку закриття */ }}
+                                    onRetry={() => createProject(projectData)} // Повторна спроба
+                                />
+                            )}
                             <div className="flex-1">
                                 {/* Step 1: Basics */}
                                 {currentStep === 'basics' && (
@@ -541,7 +605,6 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                         <Button
                                                             type="button"
                                                             variant="ghost"
-                                                            size="icon"
                                                             onClick={() => handleRemoveGithubLink(index)}
                                                             className="rounded-xl bg-secondary/50 border-border/50 hover:bg-destructive/20 hover:border-destructive"
                                                         >
@@ -601,19 +664,46 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                     type="text"
                                                     placeholder="React, TypeScript, Node.js..."
                                                     value={techInput}
-                                                    onChange={(e) => setTechInput(e.target.value)}
-                                                    onKeyPress={handleTechKeyPress}
+                                                    onChange={handleTechInputChange}
+                                                    onFocus={() => setShowSuggestions(true)}
+                                                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                                                     className="rounded-2xl bg-secondary/50 backdrop-blur-sm border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                                    disabled={isTechLoading}
                                                 />
-                                                <Button
-                                                    type="button"
-                                                    onClick={handleAddTechnology}
-                                                    className="rounded-xl bg-primary/90 hover:bg-primary"
-                                                >
-                                                    <Plus className="size-4" />
-                                                </Button>
+                                                {showSuggestions && techInput.trim() && filteredSuggestions.length > 0 && (
+                                                    <div className="absolute z-20 w-full mt-8 bg-card border border-border/50 rounded-xl shadow-xl max-h-60 overflow-y-auto">
+                                                        {filteredSuggestions.map((tech) => (
+                                                            <button
+                                                                key={tech.id}
+                                                                type="button"
+                                                                onClick={() => handleAddTechnology(tech)}
+                                                                className="w-full text-left p-3 hover:bg-secondary/50 transition-colors"
+                                                            >
+                                                                {tech.name}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
                                             </div>
-
+                                            {selectedTechnologies.length > 0 && (
+                                                <div className="flex flex-wrap gap-2 mt-3">
+                                                    {selectedTechnologies.map((tech) => (
+                                                        <Badge
+                                                            key={tech.id}
+                                                            className="bg-gradient-to-r from-primary/20 to-purple-600/20 border border-primary/30 backdrop-blur-sm pl-3 pr-2 py-1.5 gap-2"
+                                                        >
+                                                            {tech.name}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleRemoveTechnology(tech.id)}
+                                                                className="hover:text-destructive transition-colors"
+                                                            >
+                                                                <X className="size-3" />
+                                                            </button>
+                                                        </Badge>
+                                                    ))}
+                                                </div>
+                                            )}
                                             {technologies.length > 0 && (
                                                 <div className="flex flex-wrap gap-2 mt-3">
                                                     {technologies.map((tech) => (
