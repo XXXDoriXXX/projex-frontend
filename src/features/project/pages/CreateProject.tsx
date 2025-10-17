@@ -180,7 +180,7 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
     };
 
     const renderMarkdown = (text: string) => {
-        let html = text
+        const html = text
             .replace(/^### (.*$)/gim, '<h3 class="mt-4 mb-2">$1</h3>')
             .replace(/^## (.*$)/gim, '<h2 class="mt-4 mb-2">$1</h2>')
             .replace(/^# (.*$)/gim, '<h1 class="mt-4 mb-2">$1</h1>')

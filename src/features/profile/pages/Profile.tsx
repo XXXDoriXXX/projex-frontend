@@ -3,7 +3,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import Loading from '../../../components/Loading.tsx';
 import ErrorMessage from '../../../components/ErrorMessage.tsx';
 import { useGetUserProfileQuery } from '../api/userApi.ts';
-import type { Project } from '../../../shared/types/Project.ts';
 import Button from "../../../components/Button.tsx";
 import {MotionEffect} from "../../../components/Animations/Motion/Motion-effect.tsx";
 import UserProfileTabs from "../../../components/UserProfileTabs.tsx";
@@ -43,7 +42,7 @@ const UserProfile = () => {
                 <div className="absolute bottom-20 left-20 size-96 bg-cyan-500/10 rounded-full blur-3xl" />
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-96 bg-pink-500/10 rounded-full blur-3xl" />
 
-                <ErrorMessage defaultMessage="Користувача не знайдено або виникла помилка." />
+                <ErrorMessage title={"Not Found"} message="Користувача не знайдено або виникла помилка." type={"error"}  />
                 <Button className="mt-4" onClick={() => navigate(-1)}>Повернутись назад</Button>
             </div>
         );
