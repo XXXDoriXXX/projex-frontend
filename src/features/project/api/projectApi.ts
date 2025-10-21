@@ -5,7 +5,7 @@ interface ProjectCreateBody {
     description: string;
     githubUrl?: string;
     demoUrl?: string;
-    media: { url: string; type: 'image' | 'video'; isMain: boolean }[];
+    mediaIds?: string[];
     technologies: string[];
 }
 interface ProjectCreateResponse {

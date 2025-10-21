@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useRef, useMemo} from "react";
+import React, {useState, useEffect, useMemo, useRef} from "react";
 import Button from "../../../components/Button.tsx";
 import { Input } from "../../../components/input.tsx";
 import { Label } from "../../../components/label.tsx";
@@ -32,6 +32,8 @@ import ErrorMessage from "../../../components/ErrorMessage.tsx";
 import {useNavigate} from "react-router-dom";
 import {useSelector} from "react-redux";
 import type {RootState} from "../../../store.ts";
+import {uploadMediaToServer} from "../services/mediaUploadService.ts";
+import {useLazyLookupUserByEmailQuery, type UserLookupData} from "../../profile/api/userApi.ts";
 interface CreateProjectPageProps {
     onNavigateBack?: () => void;
 }
@@ -42,6 +44,12 @@ interface MediaFile {
     type: 'image' | 'video';
     name: string;
     isMain: boolean;
+
+
+    serverId?: string;
+    uploadProgress: number;
+    isUploading: boolean;
+    uploadError: boolean;
 }
 
 interface Collaborator {
@@ -76,21 +84,31 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
     const [techInput, setTechInput] = useState('');
     const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
     const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
-    const [collaboratorEmail, setCollaboratorEmail] = useState('');
     const [showMarkdownPreview, setShowMarkdownPreview] = useState(false);
     const navigate = useNavigate();
+    const [showDismissableError, setShowDismissableError] = useState(false);
     const currentStepIndex = steps.findIndex(s => s.id === currentStep);
     const progress = ((currentStepIndex + 1) / steps.length) * 100;
     const userId = useSelector((state: RootState) => state.auth.user?.id || 'TEST_USER_ID');
     const [selectedTechnologies, setSelectedTechnologies] = useState<SelectedTechnology[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const { data: allTechnologies = [], isLoading: isTechLoading } = useGetTechnologiesQuery();
+    const [collaboratorEmail, setCollaboratorEmail] = useState('');
+    const [searchedUser, setSearchedUser] = useState<UserLookupData | null>(null);
+    const [isSearching, setIsSearching] = useState(false);
+    const [lookupUser, { data: foundUser, isFetching, isError, error }] = useLazyLookupUserByEmailQuery();
+    const token = useSelector((state: RootState) => state.auth.token);
+    const imageInputRef = useRef<HTMLInputElement>(null);
+    const videoInputRef = useRef<HTMLInputElement>(null);
     const handleAddTechnology = (tech: SelectedTechnology) => {
         if (!selectedTechnologies.find(t => t.id === tech.id)) {
             setSelectedTechnologies([...selectedTechnologies, tech]);
             setTechInput('');
             setShowSuggestions(false);
         }
+    };
+    const updateProgress = (fileId: string, progress: number) => {
+        setMediaFiles(prev => prev.map(f => f.id === fileId ? { ...f, uploadProgress: progress, uploadError: false } : f));
     };
     const handleRemoveTechnology = (techId: string) => {
         setSelectedTechnologies(selectedTechnologies.filter(t => t.id !== techId));
@@ -100,6 +118,37 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
         setTechInput(e.target.value);
         setShowSuggestions(true);
     };
+    const handleAddCollaborator = () => {
+
+        if (foundUser && !collaborators.find(c => c.id === foundUser.id)) {
+            const newCollaborator: Collaborator = {
+                id: foundUser.id,
+                name: foundUser.name,
+                email: foundUser.email,
+                avatar: foundUser.avatar,
+            };
+            setCollaborators([...collaborators, newCollaborator]);
+            setCollaboratorEmail('');
+            setSearchedUser(null);
+        }
+    };
+    const handleSearchUser = () => {
+        const email = collaboratorEmail.trim();
+        if (email) {
+            setIsSearching(true);
+            lookupUser(email);
+        }
+    };
+    useEffect(() => {
+        if (!isFetching) {
+            setIsSearching(false);
+            if (foundUser) {
+                setSearchedUser(foundUser);
+            } else if (isError) {
+                setSearchedUser(null);
+            }
+        }
+    }, [isFetching, foundUser, isError, error]);
     const filteredSuggestions = React.useMemo(() => {
         const input = techInput.toLowerCase();
 
@@ -126,7 +175,14 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
     const handleAddGithubLink = () => {
         setGithubLinks([...githubLinks, '']);
     };
-
+    const handleDismissError = () => {
+        setShowDismissableError(false);
+    };
+    useEffect(() => {
+        if (submitError) {
+            setShowDismissableError(true);
+        }
+    }, [submitError]);
     const handleRemoveGithubLink = (index: number) => {
         if (githubLinks.length > 1) {
             setGithubLinks(githubLinks.filter((_, i) => i !== index));
@@ -139,18 +195,62 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
         setGithubLinks(newLinks);
     };
 
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {
+        const files = e.target.files;
+        if (!files || files.length === 0 || !token) {
+            alert('Authentication error or no file selected.');
+            return;
+        }
 
-    const handleFileUpload = (type: 'image' | 'video') => {
+        const file = files[0];
+
+        // Створюємо клієнтський ID та тимчасовий URL
+        const clientId = Date.now().toString();
+        const tempUrl = URL.createObjectURL(file); // Для локального прев'ю
+
         const newFile: MediaFile = {
-            id: Date.now().toString(),
-            url: type === 'image'
-                ? 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=800'
-                : 'https://www.w3schools.com/html/mov_bbb.mp4',
+            id: clientId,
+            url: tempUrl,
             type,
-            name: `${type}-${Date.now()}`,
-            isMain: mediaFiles.length === 0
+            name: file.name,
+            isMain: mediaFiles.length === 0,
+            serverId: undefined,
+            uploadProgress: 0,
+            isUploading: true,
+            uploadError: false
         };
-        setMediaFiles([...mediaFiles, newFile]);
+
+        // 1. Додаємо файл до списку
+        setMediaFiles(prev => [...prev, newFile]);
+
+        try {
+            // 2. Викликаємо реальну функцію завантаження
+            const result = await uploadMediaToServer(file, token, (progress) => {
+                updateProgress(clientId, progress);
+            });
+
+            // 3. Оновлюємо фінальний стан: completed, зберігаємо ServerID
+            setMediaFiles(prev => prev.map(f => f.id === clientId
+                ? {
+                    ...f,
+                    serverId: result.id,
+                    isUploading: false,
+                    uploadProgress: 100,
+                    url: result.url // Використовуємо фінальний URL від сервера
+                }
+                : f
+            ));
+        } catch (error) {
+            console.error("Media upload error:", error);
+            // 4. Обробка помилки
+            setMediaFiles(prev => prev.map(f => f.id === clientId
+                ? { ...f, isUploading: false, uploadProgress: 0, uploadError: true }
+                : f
+            ));
+        } finally {
+            // 5. Очищаємо тимчасовий URL, щоб запобігти витоку пам'яті
+            URL.revokeObjectURL(tempUrl);
+        }
     };
 
     const handleSetMainImage = (id: string) => {
@@ -168,18 +268,6 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
         setMediaFiles(updatedFiles);
     };
 
-    const handleAddCollaborator = () => {
-        if (collaboratorEmail.trim() && !collaborators.find(c => c.email === collaboratorEmail)) {
-            const newCollaborator: Collaborator = {
-                id: Date.now().toString(),
-                name: collaboratorEmail.split('@')[0],
-                email: collaboratorEmail,
-                avatar: `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100`
-            };
-            setCollaborators([...collaborators, newCollaborator]);
-            setCollaboratorEmail('');
-        }
-    };
 
     const handleRemoveCollaborator = (id: string) => {
         setCollaborators(collaborators.filter(c => c.id !== id));
@@ -220,11 +308,12 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
     };
 
     const canProceed = () => {
+        const allMediaUploaded = mediaFiles.every(f => f.uploadProgress === 100 && !f.uploadError);
         switch (currentStep) {
             case 'basics':
                 return projectName.trim() !== '';
             case 'media':
-                return true; // Optional
+                return allMediaUploaded; // Optional
             case 'links':
                 return true; // Optional
             case 'details':
@@ -242,6 +331,9 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
         }
     }, [submitSuccess, isSubmitting, navigate, userId]);
     const projectData = useMemo(() => {
+        const uploadedMediaIds = mediaFiles
+            .filter(f => f.serverId)
+            .map(f => f.serverId!);
         return {
             userId: userId,
             title: projectName,
@@ -249,11 +341,10 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
             githubUrl: githubLinks.filter(link => link.trim()).join(','),
             demoUrl: deploymentLink,
             technologies: selectedTechnologies.map(tech => tech.id),
-            media: mediaFiles.map(file => ({
-                url: file.url,
-                type: file.type,
-                isMain: file.isMain
-            })),
+            mediaIds: uploadedMediaIds,
+            subauthorIds: collaborators.map(c => c.id),
+            visible: visibility === 'public' ? null : 'PRIVATE'
+
         };
     }, [
         userId, projectName, description, githubLinks, deploymentLink,
@@ -398,13 +489,17 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                         <div className="bg-card/50 backdrop-blur-2xl border border-border/50 rounded-3xl p-8 shadow-2xl min-h-[600px] flex flex-col">
                             {/* Відображення помилок та завантаження */}
                             {isSubmitting && <Loading fullScreen text="Публікація проекту..." />}
-                            {submitError && (
+                            {(submitError || showDismissableError) && (
                                 <ErrorMessage
                                     fullScreen
                                     title="Помилка публікації"
                                     message={(submitErrorData as any)?.data?.message || "Не вдалося створити проект. Спробуйте пізніше."}
-                                    onDismiss={() => { /* Можна додати логіку закриття */ }}
-                                    onRetry={() => createProject(projectData)} // Повторна спроба
+
+                                    onDismiss={handleDismissError}
+                                    onRetry={() => {
+                                        handleDismissError();
+                                        createProject(projectData);
+                                    }}
                                 />
                             )}
                             <div className="flex-1">
@@ -489,34 +584,62 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                             </div>
                                         </div>
 
+                                        {/* Кнопки та приховані поля вводу для реального завантаження */}
                                         <div className="flex gap-3">
+                                            {/* КНОПКА: Завантажити фото */}
                                             <Button
                                                 type="button"
                                                 variant="ghost"
-                                                onClick={() => handleFileUpload('image')}
-                                                className="flex-1 rounded-2xl bg-secondary/50 border-border/50 hover:bg-secondary/70 hover:border-primary/50 gap-2 h-12"
+                                                onClick={() => imageInputRef.current?.click()}
+                                                className="flex gap-8 hover:scale-10"
                                             >
-                                                <Upload className="size-4" />
+                                                <Upload className="size-6" />
                                                 Завантажити фото
                                             </Button>
+
+                                            {/* ПРИХОВАНЕ ПОЛЕ ВВОДУ ДЛЯ ФОТО */}
+                                            <input
+                                                ref={imageInputRef} // Призначаємо Ref
+                                                id="file-image"
+                                                type="file"
+                                                accept="image/*"
+                                                className="hidden"
+                                                onChange={(e) => handleFileChange(e, 'image')}
+                                            />
+
+                                            {/* КНОПКА: Завантажити відео */}
                                             <Button
                                                 type="button"
                                                 variant="ghost"
-                                                onClick={() => handleFileUpload('video')}
-                                                className="flex-1 rounded-2xl bg-secondary/50 border-border/50 hover:bg-secondary/70 hover:border-primary/50 gap-2 h-12"
+                                                // ПРИБИРАЄМО <label> та робимо Button клікабельною
+                                                onClick={() => videoInputRef.current?.click()}
+                                                className="flex gap-8 hover:scale-10"
                                             >
-                                                <Video className="size-4" />
+                                                <Video className="size-6" />
                                                 Завантажити відео
                                             </Button>
+
+                                            {/* ПРИХОВАНЕ ПОЛЕ ВВОДУ ДЛЯ ВІДЕО */}
+                                            <input
+                                                ref={videoInputRef} // Призначаємо Ref
+                                                id="file-video"
+                                                type="file"
+                                                accept="video/*"
+                                                className="hidden"
+                                                onChange={(e) => handleFileChange(e, 'video')}
+                                            />
                                         </div>
 
+                                        {/* Список завантажених медіафайлів */}
                                         {mediaFiles.length > 0 ? (
                                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                                 {mediaFiles.map((file) => (
                                                     <div
                                                         key={file.id}
-                                                        className={`relative group rounded-2xl overflow-hidden bg-secondary/50 border-2 transition-all ${
+                                                        className={`relative group rounded-2xl overflow-hidden border-2 transition-all ${
                                                             file.isMain ? 'border-primary shadow-lg shadow-primary/30' : 'border-border/50'
+                                                        } ${
+                                                            file.uploadError ? 'border-destructive' : 'bg-secondary/50' // Червона рамка при помилці
                                                         }`}
                                                     >
                                                         <div className="aspect-video">
@@ -527,33 +650,66 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                                     className="w-full h-full object-cover"
                                                                 />
                                                             ) : (
-                                                                <div className="w-full h-full flex items-center justify-center bg-secondary/70">
-                                                                    <Video className="size-8 text-primary" />
-                                                                </div>
+                                                                // НОВИЙ БЛОК: Відображення відео
+                                                                <video
+                                                                    src={file.url}
+                                                                    title={file.name}
+                                                                    className="w-full h-full object-cover bg-black"
+                                                                    controls // Дозволяє користувачу керувати відтворенням
+                                                                    muted // Рекомендовано для автозапуску, хоча тут немає автозапуску, це гарна практика
+                                                                    playsInline // Важливо для мобільних пристроїв
+                                                                >
+                                                                    Ваш браузер не підтримує тег video.
+                                                                </video>
                                                             )}
                                                         </div>
 
-                                                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                                            {!file.isMain && file.type === 'image' && (
+                                                        {/* Індикатор прогресу (Завантаження) */}
+                                                        {file.isUploading && file.uploadProgress < 100 && (
+                                                            <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+                                                                <div className="p-4 w-4/5">
+                                                                    <p className="text-xs text-white mb-1">Завантаження... {file.uploadProgress}%</p>
+                                                                    <Progress value={file.uploadProgress} className="h-1 bg-white/20" />
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Помилка завантаження */}
+                                                        {file.uploadError && (
+                                                            <div className="absolute inset-0 flex items-center justify-center bg-destructive/80 p-2">
+                                                                <p className="text-xs text-white text-center">Помилка завантаження. Натисніть X для видалення.</p>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Кнопки керування (Показуються при ховері або коли не йде завантаження) */}
+                                                        {file.uploadProgress === 100 && (
+                                                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+
+                                                                {/* Кнопка "Головне" */}
+                                                                {!file.isMain && file.type === 'image' && (
+                                                                    <Button
+                                                                        type="button"
+                                                                        onClick={() => handleSetMainImage(file.id)}
+                                                                        className="rounded-xl bg-primary/90 hover:bg-primary gap-1"
+                                                                    >
+                                                                        <Star className="size-3" />
+                                                                        Головне
+                                                                    </Button>
+                                                                )}
+
+                                                                {/* Кнопка "Видалити" */}
                                                                 <Button
                                                                     type="button"
-                                                                    onClick={() => handleSetMainImage(file.id)}
-                                                                    className="rounded-xl bg-primary/90 hover:bg-primary gap-1"
+                                                                    variant="ghost"
+                                                                    onClick={() => handleRemoveMedia(file.id)}
+                                                                    className="rounded-xl"
                                                                 >
-                                                                    <Star className="size-3" />
-                                                                    Головне
+                                                                    <X className="size-3" />
                                                                 </Button>
-                                                            )}
-                                                            <Button
-                                                                type="button"
-                                                                variant="ghost"
-                                                                onClick={() => handleRemoveMedia(file.id)}
-                                                                className="rounded-xl"
-                                                            >
-                                                                <X className="size-3" />
-                                                            </Button>
-                                                        </div>
+                                                            </div>
+                                                        )}
 
+                                                        {/* Бедж "Головне" */}
                                                         {file.isMain && (
                                                             <div className="absolute top-2 right-2">
                                                                 <Badge className="bg-primary/90 backdrop-blur-sm gap-1">
@@ -576,7 +732,6 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                         )}
                                     </div>
                                 )}
-
                                 {/* Step 3: Links */}
                                 {currentStep === 'links' && (
                                     <div className="space-y-6 animate-in fade-in duration-500">
@@ -617,9 +772,9 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                 type="button"
                                                 variant="ghost"
                                                 onClick={handleAddGithubLink}
-                                                className="w-full rounded-2xl bg-secondary/50 border-border/50 hover:bg-secondary/70 hover:border-primary/50 gap-2"
+                                                className="flex gap-8 hover:scale-0"
                                             >
-                                                <Plus className="size-4" />
+                                                <Plus className="size-6" />
                                                 Додати репозиторій
                                             </Button>
                                         </div>
@@ -732,9 +887,9 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                     type="button"
                                                     variant="ghost"
                                                     onClick={() => setShowMarkdownPreview(!showMarkdownPreview)}
-                                                    className="rounded-xl bg-secondary/50 border-border/50 hover:bg-secondary/70 gap-2"
+                                                    className="flex gap-8 hover:scale-10"
                                                 >
-                                                    <Eye className="size-4" />
+                                                    <Eye className="size-6" />
                                                     {showMarkdownPreview ? 'Редагувати' : 'Переглянути'}
                                                 </Button>
                                             </div>
@@ -785,18 +940,50 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                         placeholder="collaborator@example.com"
                                                         value={collaboratorEmail}
                                                         onChange={(e) => setCollaboratorEmail(e.target.value)}
-                                                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddCollaborator())}
+                                                        // Запит при натисканні Enter
+                                                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleSearchUser())}
                                                         className="rounded-2xl bg-secondary/50 backdrop-blur-sm border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20 pl-10"
+                                                        disabled={isSearching}
                                                     />
                                                 </div>
                                                 <Button
                                                     type="button"
-                                                    onClick={handleAddCollaborator}
-                                                    className="rounded-xl bg-primary/90 hover:bg-primary gap-2"
+                                                    variant="secondary"
+                                                    onClick={handleSearchUser} // Кнопка викликає пошук
+                                                    disabled={isSearching || !collaboratorEmail.trim()}
+                                                    className="flex rounded-xl hover:scale-110 bg-primary/90 hover:bg-primary gap-2"
                                                 >
-                                                    <UserPlus className="size-4" />
-                                                    Додати
+                                                    {isSearching ? <Loading /> : <UserPlus className="size-6" />}
+                                                    {isSearching ? 'Пошук...' : 'Знайти'}
                                                 </Button>
+                                            </div>
+                                            <div className="min-h-10">
+                                                {isFetching ? (
+                                                    <p className="text-sm text-primary/70">Шукаємо користувача...</p>
+                                                ) : searchedUser ? (
+                                                    <div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-2xl border border-primary/50 shadow-md">
+                                                        <Avatar className="size-10">
+                                                            <AvatarImage src={searchedUser.avatar} alt={searchedUser.name} />
+                                                            <AvatarFallback className="bg-primary/10 text-primary">
+                                                                {searchedUser.name[0]?.toUpperCase() || 'U'}
+                                                            </AvatarFallback>
+                                                        </Avatar>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="truncate font-semibold">{searchedUser.name}</p>
+                                                            <p className="text-sm text-muted-foreground truncate">{searchedUser.email}</p>
+                                                        </div>
+                                                        <Button
+                                                            type="button"
+                                                            onClick={handleAddCollaborator} // Додаємо знайденого
+                                                            disabled={collaborators.some(c => c.id === searchedUser.id)}
+                                                            className="rounded-xl bg-primary/90 hover:bg-primary flex-shrink-0"
+                                                        >
+                                                            {collaborators.some(c => c.id === searchedUser.id) ? 'Додано' : 'Додати'}
+                                                        </Button>
+                                                    </div>
+                                                ) : isError ? (
+                                                    <p className="text-sm text-destructive">Користувач не знайдений або помилка сервера.</p>
+                                                ) : null}
                                             </div>
                                         </div>
 
@@ -1019,9 +1206,9 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                     variant="ghost"
                                     onClick={handlePrevStep}
                                     disabled={currentStepIndex === 0}
-                                    className="rounded-xl bg-secondary/50 border-border/50 hover:bg-secondary/70 disabled:opacity-50"
+                                    className="rounded-xl flex gap-8 hover:scale-10 py-4 bg-secondary/50 border-border/50 hover:bg-secondary/70 disabled:opacity-50"
                                 >
-                                    <ArrowLeft className="size-4 mr-2" />
+                                    <ArrowLeft className="size-6 mr-2" />
                                     Назад
                                 </Button>
 
@@ -1043,7 +1230,7 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                         className="rounded-xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 disabled:opacity-50"
                                     >
                                         Далі
-                                        <ChevronRight className="size-4 ml-2" />
+                                        <ChevronRight className="size-6 ml-2" />
                                     </Button>
                                 )}
                             </div>
