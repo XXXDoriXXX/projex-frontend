@@ -69,9 +69,10 @@ const Button = ({
             className={clsx(
                 baseStyles,
                 "cursor-pointer",
+                className,
                 variantStyles[variant],
                 disabled && "opacity-50 cursor-not-allowed",
-                className
+
             )}
         >
             {children}

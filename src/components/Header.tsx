@@ -8,19 +8,18 @@ import { useSelector } from "react-redux";
 import type { RootState } from "../store.ts";
 import { useGetProfileQuery } from "../features/auth/api/authApi.ts";
 import Loading from "./Loading.tsx";
-import ErrorMessage from "./ErrorMessage.tsx";
 
 const navItems = ["Feed", "Explore", "Profile", "Notifications"];
 
 const Header = () => {
     const token = useSelector((state: RootState) => state.auth.token);
+
     const navigate = useNavigate();
     const [active, setActive] = useState("Feed");
     const [hovered, setHovered] = useState<string | null>(null);
     const [highlightProps, setHighlightProps] = useState({ left: 0, width: 0 });
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Use the RTK Query hook to fetch user profile
     const { data: user, isLoading, isError, isFetching } = useGetProfileQuery(token!, {
         skip: !token, // Skip fetching if there's no token
     });

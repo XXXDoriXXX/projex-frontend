@@ -1,7 +1,19 @@
 import * as React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-
-import { Eye, Heart, Github, ExternalLink, Calendar, Users, Code, ArrowLeft, Video, Share } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+    Eye,
+    Heart,
+    Github,
+    ExternalLink,
+    Calendar,
+    Users,
+    Code,
+    ArrowLeft,
+    Video,
+    Share,
+    FilePenLine
+} from 'lucide-react';
 import {
     useAddViewMutation,
     useGetProjectDetailsQuery,
@@ -16,6 +28,9 @@ import {useEffect, useRef, useState} from 'react';
 import { Badge } from '../../../components/badge.tsx';
 import { Avatar, AvatarFallback, AvatarImage } from "../../../components/avatar.tsx";
 import {Separator} from "../../../components/separator.tsx";
+import {MotionEffect} from "../../../components/Animations/Motion/Motion-effect.tsx";
+import {useSelector} from "react-redux";
+import type {RootState} from "../../../store.ts";
 
 
 interface ProjectViewPageProps {
@@ -42,13 +57,14 @@ export default function ProjectPage({ onNavigateBack }: ProjectViewPageProps) {
 
     const [apiError, setApiError] = useState<string | null>(null);
     const [selectedMedia, setSelectedMedia] = useState<any>(null);
+    const currentUserId = useSelector((state: RootState) => state.auth.user?.id);
     useEffect(() => {
         const error = likeError || unlikeError;
         if (error) {
         console.log((error as any).data?.error.message);
             const message = (error as any).data?.error.message
                 || (error as any).error
-                || 'Виникла невідома помилка';
+                || 'unknown error occurred. Please try again.';
             setApiError(message);
         }
     }, [likeError, unlikeError]);
@@ -86,6 +102,11 @@ export default function ProjectPage({ onNavigateBack }: ProjectViewPageProps) {
             unlikeProject(id);
         }
     };
+    const handleEdit = () => {
+        // Тут ви можете відкрити модальне вікно або перейти на сторінку редагування
+        console.log("Відкрити вікно редагування для проекту:", id);
+        // наприклад: navigate(`/project/edit/${id}`);
+    };
 
     const isLiked = projectData?.isLiked;
 
@@ -106,7 +127,13 @@ export default function ProjectPage({ onNavigateBack }: ProjectViewPageProps) {
     }
 
     const githubLinks = projectData.githubUrl ? projectData.githubUrl.split(',').filter(link => link.trim()) : [];
-
+    const fadeTransition = {
+        initial: { opacity: 0 },
+        animate: { opacity: 1 },
+        exit: { opacity: 0 },
+        transition: { duration: 0.3, ease: 'easeInOut' }
+    };
+    const isOwner = currentUserId && projectData.author.id === currentUserId;
     return (
         <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-cyan-500/10" />
@@ -152,12 +179,23 @@ export default function ProjectPage({ onNavigateBack }: ProjectViewPageProps) {
                         </div>
 
                         <div className="flex flex-wrap gap-3">
+                            {isOwner && (
+                                <Button
+                                    variant={"ghost"}
+                                    onClick={handleEdit}
+                                    className="flex w-auto items-center justify-center border-yellow-500/50 text-yellow-500 hover:bg-yellow-500/10 hover:text-yellow-400"
+                                >
+                                    <FilePenLine className="w-4 h-4 mr-2" />
+                                    Edit Project
+                                </Button>
+                            )}
                             {projectData.githubUrl && (
                                 githubLinks.map((link, index) => (
                                     <Button
+                                        variant={"ghost"}
                                         key={index}
                                         onClick={() => window.open(link, '_blank')}
-                                        className="bg-white/5 hover:bg-white/10 border border-white/10 backdrop-blur-xl text-white transition-all duration-300"
+                                        className=" flex w-auto items-center justify-center"
                                     >
                                         <Github className="w-4 h-4 mr-2" />
                                         GitHub {githubLinks.length > 1 ? `(${index + 1})` : ''}
@@ -182,30 +220,47 @@ export default function ProjectPage({ onNavigateBack }: ProjectViewPageProps) {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Left Column - Main Content */}
-                    <div className="lg:col-span-2 space-y-8">
+                    <motion.div layout
+                                transition={{ duration: 0.4, ease: "easeOut" }}
+                                className="lg:col-span-2 space-y-8">
                         {/* Media Gallery */}
+
                         {projectData.media.length > 0 && (
                             <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6 shadow-2xl">
                                 <h2 className="text-2xl text-white mb-4">Media</h2>
 
                                 {/* Main Media Display */}
-                                <div className="mb-4 rounded-xl overflow-hidden bg-black/20 border border-white/5">
-                                    {selectedMedia?.type === 'image' ? (
-                                        <img
-                                            src={selectedMedia.url}
-                                            alt="Project media"
-                                            className="w-full h-auto max-h-[500px] object-contain"
-                                        />
-                                    ) : selectedMedia?.type === 'video' ? (
-                                        <video
-                                            src={selectedMedia.url}
-                                            controls
-                                            className="w-full h-auto max-h-[500px]"
-                                        />
-                                    ) : null}
-                                </div>
+                                <MotionEffect slide={{ direction: 'down' }} fade zoom inView delay={0.05}>
+                                    <div className="mb-4 rounded-xl overflow-hidden bg-black/20 border border-white/5">
 
+                                        {/* AnimatePresence відстежує зміни "дітей" всередині */}
+                                        {/* mode="wait" - чекає, поки стара картинка зникне, перед тим як показати нову */}
+                                        <AnimatePresence mode="wait">
+                                            {selectedMedia?.type === 'image' ? (
+                                                <motion.img
+                                                    // Ключ - це те, як AnimatePresence розуміє, що елемент змінився
+                                                    key={selectedMedia.url}
+                                                    src={selectedMedia.url}
+                                                    alt="Project media"
+                                                    className="w-full h-auto max-h-[500px] object-contain"
+                                                    // Розгортаємо наші налаштування анімації
+                                                    {...fadeTransition}
+                                                />
+                                            ) : selectedMedia?.type === 'video' ? (
+                                                <motion.video
+                                                    key={selectedMedia.url} // Той самий ключ
+                                                    src={selectedMedia.url}
+                                                    controls
+                                                    className="w-full h-auto max-h-[500px]"
+                                                    // І та сама анімація
+                                                    {...fadeTransition}
+                                                />
+                                            ) : null}
+                                        </AnimatePresence>
+                                    </div>
+                                </MotionEffect>
                                 {/* Thumbnail Gallery */}
+                                <MotionEffect slide={{ direction: 'down' }} fade zoom inView delay={0.05}>
                                 {projectData.media.length > 1 && (
                                     <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
                                         {projectData.media.map((media) => (
@@ -233,6 +288,7 @@ export default function ProjectPage({ onNavigateBack }: ProjectViewPageProps) {
                                         ))}
                                     </div>
                                 )}
+                                </MotionEffect>
                             </div>
                         )}
 
@@ -266,7 +322,7 @@ export default function ProjectPage({ onNavigateBack }: ProjectViewPageProps) {
                                 </div>
                             </div>
                         )}
-                    </div>
+                    </motion.div>
 
                     {/* Right Column - Sidebar */}
                     <div className="space-y-6">
@@ -370,19 +426,22 @@ export default function ProjectPage({ onNavigateBack }: ProjectViewPageProps) {
                             )}
                             <div className="space-y-3">
                                 <Button
+                                    variant={`${isLiked ? 'ghost' : 'primary'}`}
                                     onClick={handleLike}
                                     disabled={isLiking}
                                     className={`w-full flex items-center justify-center ${
                                         isLiked
-                                            ? 'bg-[#8b5cf6] hover:bg-[#7c3aed]'
-                                            : 'bg-white/5 hover:bg-white/10 border border-white/10'
+                                            ? 'rounded-full'
+                                            : 'rounded-full'
                                     } text-white transition-all duration-300`}
                                 >
-                                    <Heart className={`w-4 h-4 mr-2 ${isLiked ? 'fill-current' : ''}`} />
-                                    {isLiking ? 'Завантаження...' : isLiked ? 'Подобається' : 'Подобається цей проект'}
+                                    <Heart className={`w-6 h-6 mr-2  ${isLiked ? 'fill-current' : ''}`} />
+                                    {isLiking ? 'Loading...' : isLiked ? 'Liked' : 'Like'}
                                 </Button>
-                                <Button className="w-full flex items-center justify-center bg-white/5 hover:bg-white/10 border border-white/10 text-white transition-all duration-300">
-                                    <Share className={`w-4 h-4 mr-2`}/>
+                                <Button
+                                    variant={"ghost"}
+                                    className="w-full flex items-center justify-center">
+                                    <Share className={`w-6 h-6 mr-2`}/>
                                     Share
                                 </Button>
                             </div>
