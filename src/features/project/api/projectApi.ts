@@ -1,4 +1,5 @@
 import {createApi, fetchBaseQuery} from "@reduxjs/toolkit/query/react";
+import type {DetailedProject, ProjectDetailsResponse} from "../../../shared/types/Project.ts";
 
 interface ProjectCreateBody {
     title: string;
@@ -23,6 +24,9 @@ export interface TechnologyResponse {
     data: Technology[];
     message: string;
 }
+
+const PROJECT_TAG = 'ProjectDetails';
+
 export const projectApi = createApi({
     reducerPath: 'projectApi',
     baseQuery: fetchBaseQuery({
@@ -35,7 +39,36 @@ export const projectApi = createApi({
             return headers;
         },
     }),
+
+    tagTypes: [PROJECT_TAG, 'Technology'],
     endpoints: (builder) => ({
+
+        addView: builder.mutation<void, string>({
+            query: (projectId) => ({
+                url: `project/view/${projectId}`,
+                method: 'POST',
+            }),
+
+            invalidatesTags: (result, error, projectId) => [{ type: PROJECT_TAG, id: projectId }],
+        }),
+
+        likeProject: builder.mutation<void, string>({
+            query: (projectId) => ({
+                url: `project/like/${projectId}`,
+                method: 'POST',
+            }),
+
+            invalidatesTags: (result, error, projectId) => [{ type: PROJECT_TAG, id: projectId }],
+        }),
+        unlikeProject: builder.mutation<void, string>({
+            query: (projectId) => ({
+                url: `project/like/${projectId}`,
+                method: 'DELETE',
+            }),
+
+            invalidatesTags: (result, error, projectId) => [{ type: PROJECT_TAG, id: projectId }],
+        }),
+
         createProject: builder.mutation<ProjectCreateResponse, ProjectCreateBody>({
             query: (projectData) => ({
                 url: 'project/create',
@@ -43,10 +76,28 @@ export const projectApi = createApi({
                 body: projectData,
             }),
         }),
+
         getTechnologies: builder.query<Technology[], void>({
             query: () => 'project/technology',
             transformResponse: (response: TechnologyResponse) => response.data,
+            providesTags: ['Technology'],
+        }),
+
+
+        getProjectDetails: builder.query<DetailedProject, string>({
+            query: (projectId) => `project/get/${projectId}`,
+            transformResponse: (response: ProjectDetailsResponse) => response.data,
+
+            providesTags: (result, error, projectId) => [{ type: PROJECT_TAG, id: projectId }],
         }),
     }),
 });
-export const { useCreateProjectMutation, useGetTechnologiesQuery } = projectApi;
+
+export const {
+    useCreateProjectMutation,
+    useGetTechnologiesQuery,
+    useGetProjectDetailsQuery,
+    useAddViewMutation,
+    useLikeProjectMutation,
+    useUnlikeProjectMutation
+} = projectApi;
