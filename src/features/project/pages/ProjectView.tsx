@@ -12,7 +12,7 @@ import Loading from "../../../components/Loading.tsx";
 import ErrorMessage from "../../../components/ErrorMessage.tsx";
 
 import Button from '../../../components/Button';
-import {useRef, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import { Badge } from '../../../components/badge.tsx';
 import { Avatar, AvatarFallback, AvatarImage } from "../../../components/avatar.tsx";
 import {Separator} from "../../../components/separator.tsx";
@@ -37,9 +37,21 @@ export default function ProjectPage({ onNavigateBack }: ProjectViewPageProps) {
     });
 
     const [addView] = useAddViewMutation();
-    const [likeProject, { isLoading: isLiking }] = useLikeProjectMutation();
-    const [unlikeProject, {isLoading:isUnliking}] = useUnlikeProjectMutation();
+    const [likeProject, { isLoading: isLiking, error: likeError }] = useLikeProjectMutation();
+    const [unlikeProject, { isLoading: isUnliking, error: unlikeError }] = useUnlikeProjectMutation();
+
+    const [apiError, setApiError] = useState<string | null>(null);
     const [selectedMedia, setSelectedMedia] = useState<any>(null);
+    useEffect(() => {
+        const error = likeError || unlikeError;
+        if (error) {
+        console.log((error as any).data?.error.message);
+            const message = (error as any).data?.error.message
+                || (error as any).error
+                || 'Виникла невідома помилка';
+            setApiError(message);
+        }
+    }, [likeError, unlikeError]);
     React.useEffect(() => {
         if (projectData && !selectedMedia) {
             setSelectedMedia(projectData.media.length > 0 ? projectData.media[0] : null);
@@ -66,6 +78,7 @@ export default function ProjectPage({ onNavigateBack }: ProjectViewPageProps) {
     };
 
     const handleLike = () => {
+        setApiError(null);
         if (id && !isLiking && !isLiked) {
             likeProject(id);
         }
@@ -345,6 +358,16 @@ export default function ProjectPage({ onNavigateBack }: ProjectViewPageProps) {
                         {/* Quick Actions */}
                         <div className="bg-gradient-to-br from-[#8b5cf6]/20 to-purple-900/20 backdrop-blur-xl rounded-2xl border border-[#8b5cf6]/30 p-6 shadow-2xl">
                             <h3 className="text-white mb-4">Quick Actions</h3>
+                            {apiError && (
+                                <div className="mb-4">
+                                    <ErrorMessage
+                                        message={apiError}
+                                        type="error"
+                                        onDismiss={() => setApiError(null)} // Дозволяє користувачу закрити помилку
+                                        fullScreen={false} // Як ви і просили, не на повний екран
+                                    />
+                                </div>
+                            )}
                             <div className="space-y-3">
                                 <Button
                                     onClick={handleLike}

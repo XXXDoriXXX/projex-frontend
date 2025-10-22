@@ -82,10 +82,10 @@ export function ErrorMessage({
                     <div className="flex gap-3">
                         <Button
                             onClick={onRetry}
-                            className="flex-1 rounded-xl gap-2"
+                            className="flex rounded-xl gap-2"
                             variant={'ghost'}
                         >
-                            <RefreshCw className="size-4" />
+                            <RefreshCw className="size-6" />
                             Спробувати знову
                         </Button>
                         {onDismiss && (
