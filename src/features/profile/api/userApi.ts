@@ -5,7 +5,7 @@ export interface UserLookupData {
     id: string;
     email: string;
     name: string;
-    avatar: string;
+    avatarUrl: string;
 }
 interface UserLookupResponse {
     success: boolean;

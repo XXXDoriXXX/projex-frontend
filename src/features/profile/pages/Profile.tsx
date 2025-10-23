@@ -9,7 +9,6 @@ import UserProfileTabs from "../../../components/UserProfileTabs.tsx";
 import ProjectCard from "../../../components/ProjectCard.tsx";
 
 
-// Компонент для відображення картки з даними
 const StatCard = ({ title, value }: { title: string; value: number | string }) => (
     <div className="flex flex-col items-center bg-gray-800/50 p-4 rounded-2xl border border-white/10 shadow-lg">
         <h3 className="text-xl font-bold">{value}</h3>
@@ -17,7 +16,6 @@ const StatCard = ({ title, value }: { title: string; value: number | string }) =
     </div>
 );
 
-// Компонент для відображення тегів
 const Tag = ({ text }: { text: string }) => (
     <span className="bg-purple-500/20 text-purple-200 text-xs font-semibold px-3 py-1 rounded-full hover:bg-purple-500/30 transition hover:scale-[1.2] ">
         {text}
@@ -31,9 +29,11 @@ const UserProfile = () => {
     const { data: user, isLoading, isError } = useGetUserProfileQuery(username || '');
     console.log('Fetching profile for username:', user);
     if (isLoading) {
-        return <Loading message="Завантаження профілю..." />;
+        return <Loading text="Завантаження профілю..." />;
     }
-
+    const handleNavigate = (path: string) => () => {
+        navigate(path);
+    }
     if (isError || !user) {
         return (
             <div className="min-h-screen min-w-screen flex flex-col items-center justify-center p-4">
@@ -124,7 +124,11 @@ const UserProfile = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {user.projects.length > 0 ? (
                             user.projects.map((project) => (
-                                <ProjectCard key={project.id} project={project} />
+                                <ProjectCard
+                                    key={project.id}
+                                    project={project}
+                                    onClick={() => handleNavigate(`/project/view/${project.id}`)}
+                                />
                             ))
                         ) : (
                             <p className="text-gray-500">Користувач ще не додав жодного проекту.</p>

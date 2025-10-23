@@ -129,7 +129,7 @@ const Header = () => {
                         hover:shadow-[0_0_25px_rgba(255,255,255,0.15)]">
 
                         {isLoading || isFetching ? (
-                            <Loading message="Loading..." />
+                            <Loading text="Loading..." />
                         ) : isError ? (
                             displayLoginContent
                         ) : token ? (

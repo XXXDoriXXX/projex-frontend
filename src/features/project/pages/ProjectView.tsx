@@ -107,6 +107,9 @@ export default function ProjectPage({ onNavigateBack }: ProjectViewPageProps) {
         console.log("Відкрити вікно редагування для проекту:", id);
         // наприклад: navigate(`/project/edit/${id}`);
     };
+    const handleNavigate = (path: string) => () => {
+        navigate(path);
+    }
 
     const isLiked = projectData?.isLiked;
 
@@ -333,7 +336,7 @@ export default function ProjectPage({ onNavigateBack }: ProjectViewPageProps) {
                                 <h3 className="text-white">Author</h3>
                             </div>
                             <div className="flex items-center gap-3">
-                                <Avatar className="w-12 h-12 border-2 border-[#8b5cf6]/50">
+                                <Avatar className="w-12 h-12 border-2 border-[#8b5cf6]/50 cursor-pointer" onClick={handleNavigate(`/profile/${projectData.author.username}`)}>
                                     <AvatarImage src={projectData.author.avatarUrl} alt={projectData.author.username} />
                                     <AvatarFallback className="bg-[#8b5cf6]/20 text-[#8b5cf6]">
                                         {projectData.author.username.substring(0, 2).toUpperCase()}
@@ -428,7 +431,7 @@ export default function ProjectPage({ onNavigateBack }: ProjectViewPageProps) {
                                 <Button
                                     variant={`${isLiked ? 'ghost' : 'primary'}`}
                                     onClick={handleLike}
-                                    disabled={isLiking}
+                                    disabled={isLiking||currentUserId === undefined}
                                     className={`w-full flex items-center justify-center ${
                                         isLiked
                                             ? 'rounded-full'

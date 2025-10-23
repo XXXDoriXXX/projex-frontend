@@ -5,14 +5,18 @@ import ShinyText from "../../../components/TextAnimations/ShinyText/ShinyText.ts
 import TextType from "../../../components/TextAnimations/TextType/TextType.tsx";
 import MagicBento from "../../../components/Components/MagicBento/MagicBento.tsx";
 import { MotionEffect } from "../../../components/Animations/Motion/Motion-effect.tsx";
+import {useNavigate} from "react-router-dom";
 
 
 
 const Home = () => {
+    const navigate = useNavigate();
     const handleAnimationComplete = () => {
         console.log('Animation completed!');
     };
-
+    const handleNavigate = (path: string) => () => {
+        navigate(path);
+    }
     return (
         <div className="relative min-h-screen text-white flex flex-col items-center overflow-hidden">
 
@@ -51,7 +55,7 @@ const Home = () => {
 
                                         <>
                                             <Button variant="primary" className="text-xl">Explore Projects</Button>
-                                            <Button variant="glass">
+                                            <Button variant="glass" onClick={handleNavigate("/project/create")}>
                                                 <ShinyText text="Create a new project!" disabled={false} speed={3} className="text-xl" />
                                             </Button>
                                         </>

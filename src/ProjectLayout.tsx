@@ -11,6 +11,7 @@ const ProjectLayout = () => {
         skip: !token,
     });
     return (
+
         <div className="flex flex-col min-h-screen bg-gray-950 text-white">
                 <Outlet />
         </div>

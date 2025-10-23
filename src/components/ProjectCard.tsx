@@ -1,17 +1,18 @@
 import React from 'react';
 import type {Project} from "../shared/types/Project.ts";
 
-const Tag = ({ text }: { text: string }) => (
+const Tag = ({text}: { text: string }) => (
     <span className="bg-purple-500/20 text-purple-200 text-xs font-semibold px-3 py-1 rounded-full">
         {text}
     </span>
 );
 
 interface ProjectCardProps {
-    project: Project;
+    project: Project,
+    onClick?: () => void
 }
 
-const ProjectCard: React.FC<ProjectCardProps> = ({ project }) => {
+const ProjectCard: React.FC<ProjectCardProps> = ({project, onClick}) => {
     const tags = project.tags || [];
     return (
         <div className="
@@ -23,9 +24,10 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project }) => {
             {/* Прев'ю зображення */}
             <div className="relative">
                 <img
-                    src={project.previewUrl || 'https://via.placeholder.com/600x400.png?text=No+Image'}
+                    src={project.previewUrl || 'https://st5.depositphotos.com/76820996/69653/v/450/depositphotos_696539308-stock-illustration-image-available-icon-isolated-white.jpg'}
                     alt={`Preview of ${project.title}`}
                     className="w-full h-48 object-cover"
+                    onClick={onClick}
                 />
                 <a
                     href={project.demoUrl || project.githubUrl}
@@ -98,7 +100,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project }) => {
                 {/* Теги */}
                 <div className="flex flex-wrap gap-2">
                     {tags.map((tag) => (
-                        <Tag key={tag} text={tag} />
+                        <Tag key={tag} text={tag}/>
                     ))}
                 </div>
             </div>

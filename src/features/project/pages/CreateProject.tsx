@@ -99,6 +99,7 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
     const [lookupUser, { data: foundUser, isFetching, isError, error }] = useLazyLookupUserByEmailQuery();
     const token = useSelector((state: RootState) => state.auth.token);
     const imageInputRef = useRef<HTMLInputElement>(null);
+    const [newlyCreatedProjectId, setNewlyCreatedProjectId] = useState<string | null>(null);
     const videoInputRef = useRef<HTMLInputElement>(null);
     const handleAddTechnology = (tech: SelectedTechnology) => {
         if (!selectedTechnologies.find(t => t.id === tech.id)) {
@@ -107,6 +108,7 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
             setShowSuggestions(false);
         }
     };
+    const currentUserId = useSelector((state: RootState) => state.auth.user?.id);
     const updateProgress = (fileId: string, progress: number) => {
         setMediaFiles(prev => prev.map(f => f.id === fileId ? { ...f, uploadProgress: progress, uploadError: false } : f));
     };
@@ -125,7 +127,7 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                 id: foundUser.id,
                 name: foundUser.name,
                 email: foundUser.email,
-                avatar: foundUser.avatar,
+                avatar: foundUser.avatarUrl,
             };
             setCollaborators([...collaborators, newCollaborator]);
             setCollaboratorEmail('');
@@ -140,10 +142,14 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
         }
     };
     useEffect(() => {
+        if(!currentUserId){
+            navigate("/")
+        }
         if (!isFetching) {
             setIsSearching(false);
             if (foundUser) {
                 setSearchedUser(foundUser);
+                console.log(foundUser);
             } else if (isError) {
                 setSearchedUser(null);
             }
@@ -168,7 +174,7 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
         return sortedResults.slice(0, 5);
 
     }, [techInput, allTechnologies, selectedTechnologies]);
-    const [
+    let [
         createProject,
         { isLoading: isSubmitting, isError: submitError, isSuccess: submitSuccess, error: submitErrorData }
     ] = useCreateProjectMutation();
@@ -324,10 +330,10 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                 return true;
         }
     };
+
     useEffect(() => {
         if (submitSuccess && !isSubmitting) {
-            alert("Проект успішно опубліковано!");
-            navigate(`/user/${userId}`);
+            navigate(`/project/view/${newlyCreatedProjectId}`);
         }
     }, [submitSuccess, isSubmitting, navigate, userId]);
     const projectData = useMemo(() => {
@@ -343,6 +349,7 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
             technologies: selectedTechnologies.map(tech => tech.id),
             mediaIds: uploadedMediaIds,
             subauthorIds: collaborators.map(c => c.id),
+            previewId: mediaFiles.find(f => f.isMain && f.serverId)?.serverId || null,
             visible: visibility === 'public' ? null : 'PRIVATE'
 
         };
@@ -352,9 +359,11 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
     ]);
     const handleSubmit = async () => {
         try {
-            // Викликаємо RTK Query мутацію
-            await createProject(projectData);
-            // Успіх буде оброблено в useEffect
+            const result = await createProject(projectData).unwrap();
+
+            // 2. Зберігаємо ID нового проєкту у стані
+            const newProjectId = result.data.id;
+            setNewlyCreatedProjectId(newProjectId);
         } catch (error) {
             // Помилка буде оброблена в submitErrorData
             console.error("Submission failed:", error);
@@ -940,7 +949,6 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                         placeholder="collaborator@example.com"
                                                         value={collaboratorEmail}
                                                         onChange={(e) => setCollaboratorEmail(e.target.value)}
-                                                        // Запит при натисканні Enter
                                                         onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleSearchUser())}
                                                         className="rounded-2xl bg-secondary/50 backdrop-blur-sm border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20 pl-10"
                                                         disabled={isSearching}
@@ -963,9 +971,9 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                 ) : searchedUser ? (
                                                     <div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-2xl border border-primary/50 shadow-md">
                                                         <Avatar className="size-10">
-                                                            <AvatarImage src={searchedUser.avatar} alt={searchedUser.name} />
+                                                            <AvatarImage src={searchedUser.avatarUrl} alt={searchedUser.name} />
                                                             <AvatarFallback className="bg-primary/10 text-primary">
-                                                                {searchedUser.name[0]?.toUpperCase() || 'U'}
+                                                                {searchedUser.name?.charAt(0)?.toUpperCase() || 'U'}
                                                             </AvatarFallback>
                                                         </Avatar>
                                                         <div className="flex-1 min-w-0">
@@ -999,7 +1007,7 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                             <Avatar className="size-10">
                                                                 <AvatarImage src={collab.avatar} alt={collab.name} />
                                                                 <AvatarFallback className="bg-primary/10 text-primary">
-                                                                    {collab.name[0].toUpperCase()}
+                                                                    {collab.name?.charAt(0)?.toUpperCase() || 'U'}
                                                                 </AvatarFallback>
                                                             </Avatar>
                                                             <div className="flex-1 min-w-0">
@@ -1151,7 +1159,7 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                             <Avatar key={collab.id} className="size-8 border-2 border-background">
                                                                 <AvatarImage src={collab.avatar} alt={collab.name} />
                                                                 <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                                                                    {collab.name[0].toUpperCase()}
+                                                                    {collab.name?.charAt(0)?.toUpperCase() || 'U'}
                                                                 </AvatarFallback>
                                                             </Avatar>
                                                         ))}
