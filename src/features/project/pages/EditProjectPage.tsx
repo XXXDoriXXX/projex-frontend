@@ -24,6 +24,8 @@ import {
     ImageIcon, LinkIcon, Lock, Mail, Plus, Star, Upload,
     UserPlus, Users, Video, X
 } from 'lucide-react';
+import {useGetProjectDetailsQuery, useGetTechnologiesQuery,} from "../api/projectApi.ts";
+import {useLazyLookupUserByEmailQuery} from "../../profile/api/userApi.ts";
 
 // --- [TYPE DEFINITIONS & PLACEHOLDERS] ---
 interface MediaFile { id: string; url: string; type: 'image' | 'video'; name: string; isMain: boolean; serverId?: string; uploadProgress: number; isUploading: boolean; uploadError: boolean; }
@@ -34,24 +36,7 @@ interface RootState { auth: { user?: { id?: string }, token?: string } }
 interface CreateProjectPageProps { onNavigateBack?: () => void; }
 
 // --- Placeholder Data ---
-const placeholderProjectData = {
-    title: 'My Awesome Project (Editable)',
-    description: `# Existing Project\n\nThis is the **description** of my project that I want to edit.`,
-    githubUrl: 'https://github.com/your-username/your-repo,https://github.com/second/repo',
-    demoUrl: 'https://my-project-demo.com',
-    media: [
-        { id: 'client-id-1', url: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800', type: 'image' as const, name: 'code.jpg', isMain: true, serverId: 'server-media-id-1', uploadProgress: 100, isUploading: false, uploadError: false },
-    ],
-    technologies: [
-        { id: 'tech-id-react', name: 'React' },
-        { id: 'tech-id-ts', name: 'TypeScript' },
-    ],
-    collaborators: [
-        { id: 'user-id-collab', name: 'Collaborator Name', email: 'collab@example.com', avatar: 'https://i.pravatar.cc/150?img=1' },
-    ],
-    visibility: 'public' as 'public' | 'private',
-};
-const allTechnologies: SelectedTechnology[] = [{id: 'tech-id-react', name: 'React'}, {id: 'tech-id-ts', name: 'TypeScript'}];
+
 const uploadMediaToServer = async (file: File, token: string, onProgress: (p: number) => void): Promise<{ id: string, url: string, type: 'image' | 'video' }> => { /* ... */ return new Promise(resolve => setTimeout(() => resolve({ id: `server-${Date.now()}`, url: URL.createObjectURL(file), type: file.type.startsWith('image') ? 'image' : 'video' }), 500)); };
 
 
@@ -72,24 +57,35 @@ const SectionHeader = ({ title, icon: Icon, isOpen, onClick }: { title: string, 
 
 export function EditProjectPage({ onNavigateBack }: CreateProjectPageProps) {
     const { projectId } = useParams<{ projectId: string }>();
+
     const navigate = useNavigate();
+    const {
+        data: projectData,
+        isLoading: isProjectLoading, // Новий стан завантаження
+        isError: isProjectError,     // Новий стан помилки
+        error: projectError,
+        isSuccess
+    } = useGetProjectDetailsQuery(projectId || '', {
+        skip: !projectId, // Пропускаємо запит, якщо projectId відсутній
+    });
+    // Використовуємо окрему змінну для isTechLoading з хука
+    const { data: allTechnologies = [], isLoading: isTechsLoading } = useGetTechnologiesQuery();
 
     // --- State Initialization ---
-    const [projectName, setProjectName] = useState(placeholderProjectData.title);
-    const [visibility, setVisibility] = useState<'public' | 'private'>(placeholderProjectData.visibility);
-    const [githubLinks, setGithubLinks] = useState<string[]>(placeholderProjectData.githubUrl.split(','));
-    const [deploymentLink, setDeploymentLink] = useState(placeholderProjectData.demoUrl);
-    const [description, setDescription] = useState(placeholderProjectData.description);
-    const [selectedTechnologies, setSelectedTechnologies] = useState<SelectedTechnology[]>(placeholderProjectData.technologies);
-    const [mediaFiles, setMediaFiles] = useState<MediaFile[]>(placeholderProjectData.media as MediaFile[]);
-    const [collaborators, setCollaborators] = useState<Collaborator[]>(placeholderProjectData.collaborators);
+    const [projectName, setProjectName] = useState('');
+    const [visibility, setVisibility] = useState<'public' | 'private'>('public');
+    const [githubLinks, setGithubLinks] = useState<string[]>(['']);
+    const [deploymentLink, setDeploymentLink] = useState('');
+    const [description, setDescription] = useState('');
+    const [selectedTechnologies, setSelectedTechnologies] = useState<SelectedTechnology[]>([]);
+    const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
+    const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
 
     // --- Control States ---
     const [techInput, setTechInput] = useState('');
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [collaboratorEmail, setCollaboratorEmail] = useState('');
-    const [searchedUser, setSearchedUser] = useState<UserLookupData | null>(null);
-    const [isSearching, setIsSearching] = useState(false);
+
     const [showMarkdownPreview, setShowMarkdownPreview] = useState(false);
     const [showDismissableError, setShowDismissableError] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -98,12 +94,18 @@ export function EditProjectPage({ onNavigateBack }: CreateProjectPageProps) {
     const [openSections, setOpenSections] = useState<Record<string, boolean>>({
         basics: true, media: false, links: false, details: true, team: false,
     });
+    const [searchedUser, setSearchedUser] = useState<UserLookupData | null>(null);
+    const [isSearching, setIsSearching] = useState(false); // Стан для кнопки "Знайти"
 
     // --- Refs and Auth data ---
-    const token = 'FAKE_TOKEN'; // Simplified auth access
     const imageInputRef = useRef<HTMLInputElement>(null);
     const videoInputRef = useRef<HTMLInputElement>(null);
-    const isTechLoading = false;
+    const isTechLoading = isTechsLoading; // Використовуємо isTechsLoading для елементів, які раніше використовували isTechLoading
+
+    const [
+        lookupUser,
+        { data: foundUser, isFetching: isUserFetching, error: userLookupError }
+    ] = useLazyLookupUserByEmailQuery();
 
     // --- Handlers ---
     const toggleSection = (sectionId: string) => { setOpenSections(prev => ({ ...prev, [sectionId]: !prev[sectionId] })); };
@@ -118,15 +120,54 @@ export function EditProjectPage({ onNavigateBack }: CreateProjectPageProps) {
     const handleRemoveCollaborator = (id: string) => { setCollaborators(collaborators.filter(c => c.id !== id)); };
     const handleSetMainImage = (id: string) => { setMediaFiles(mediaFiles.map(file => ({ ...file, isMain: file.id === id }))); };
     const handleRemoveMedia = (id: string) => { const fileToRemove = mediaFiles.find(f => f.id === id); const updatedFiles = mediaFiles.filter(file => file.id !== id); if (updatedFiles.length > 0 && fileToRemove?.isMain) updatedFiles[0].isMain = true; setMediaFiles(updatedFiles); };
-    const handleSearchUser = () => { setIsSearching(true); setTimeout(() => { const mockUser: UserLookupData = { id: `found-${Date.now()}`, name: `Found User`, email: collaboratorEmail, avatarUrl: `https://i.pravatar.cc/150?u=${collaboratorEmail}` }; setSearchedUser(mockUser); setIsSearching(false); }, 1000); };
-    const handleAddCollaborator = () => { if (searchedUser) { setCollaborators(prev => [...prev, { id: searchedUser.id, name: searchedUser.name, email: searchedUser.email, avatar: searchedUser.avatarUrl }]); setSearchedUser(null); setCollaboratorEmail(''); } };
+    const handleSearchUser = () => {
+        const email = collaboratorEmail.trim();
+        if (email) {
+            setIsSearching(true);
+            setSearchedUser(null);
+            lookupUser(email);
+        }
+    };
+    const handleAddCollaborator = () => {
+        if (searchedUser && !collaborators.find(c => c.id === searchedUser.id)) {
+            setCollaborators(prev => [...prev, {
+                id: searchedUser.id,
+                name: searchedUser.name,
+                email: searchedUser.email,
+                avatar: searchedUser.avatarUrl
+            }]);
+            setSearchedUser(null);
+            setCollaboratorEmail('');
+        }
+    };
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => { /* Full upload logic here */ };
     const renderMarkdown = (text: string): string => { return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>'); };
 
     // --- Memos and Submission Check ---
-    const filteredSuggestions = useMemo(() => { const input = techInput.toLowerCase(); const unselectedTechnologies = allTechnologies.filter(tech => !selectedTechnologies.find(t => t.id === tech.id)); const startsWith = unselectedTechnologies.filter(tech => tech.name.toLowerCase().startsWith(input)); const contains = unselectedTechnologies.filter(tech => tech.name.toLowerCase().includes(input) && !tech.name.toLowerCase().startsWith(input)); return [...startsWith, ...contains].slice(0, 5); }, [techInput, allTechnologies, selectedTechnologies]);
+    const filteredSuggestions = useMemo(() => {
+        const input = techInput.toLowerCase();
+
+        // Використовуємо реальні завантажені технології
+        const unselectedTechnologies = allTechnologies.filter(tech => !selectedTechnologies.find(t => t.id === tech.id));
+
+        const startsWith = unselectedTechnologies.filter(tech => tech.name.toLowerCase().startsWith(input));
+        const contains = unselectedTechnologies.filter(tech => tech.name.toLowerCase().includes(input) && !tech.name.toLowerCase().startsWith(input));
+
+        return [...startsWith, ...contains].slice(0, 5);
+    }, [techInput, allTechnologies, selectedTechnologies]);
     const canSubmit = mediaFiles.every(f => f.uploadProgress === 100 && !f.uploadError) && projectName.trim() !== '';
-    const projectUpdateData = useMemo(() => { const uploadedMediaIds = mediaFiles.filter(f => f.serverId).map(f => f.serverId!); return { title: projectName, description: description, githubUrl: githubLinks.filter(link => link.trim()).join(','), demoUrl: deploymentLink, technologies: selectedTechnologies.map(tech => tech.id), mediaIds: uploadedMediaIds, subauthorIds: collaborators.map(c => c.id), previewId: mediaFiles.find(f => f.isMain && f.serverId)?.serverId || null, visible: visibility === 'private' ? 'PRIVATE' : 'PUBLIC', collaborators: collaborators }; }, [projectName, description, githubLinks, deploymentLink, selectedTechnologies, mediaFiles, collaborators, visibility]);
+    const projectUpdateData = useMemo(() => { const uploadedMediaIds = mediaFiles.filter(f => f.serverId).map(f => f.serverId!);
+            return {
+                title: projectName,
+                description: description,
+                githubUrl: githubLinks.filter(link => link.trim()).join(','),
+                demoUrl: deploymentLink,
+                technologies: selectedTechnologies,
+                mediaIds: uploadedMediaIds,
+                subauthorIds: collaborators.map(c => c.id),
+                previewId: mediaFiles.find(f => f.isMain && f.serverId)?.serverId || null,
+                visible: visibility === 'private' ? 'PRIVATE' : 'PUBLIC', collaborators: collaborators }; },
+        [projectName, description, githubLinks, deploymentLink, selectedTechnologies, mediaFiles, collaborators, visibility]);
 
 
     const handleSubmit = async () => {
@@ -143,7 +184,78 @@ export function EditProjectPage({ onNavigateBack }: CreateProjectPageProps) {
         setIsSubmitting(false);
     };
 
+    useEffect(() => {
+        if (isSuccess && projectData) {
+            // Розділення githubUrl на масив
+            const links = projectData.githubUrl ? projectData.githubUrl.split(',').filter(link => link.trim()) : [''];
 
+            // Мапінг медіафайлів (додавання клієнтських станів)
+            const mappedMedia: MediaFile[] = projectData.media.map(m => ({
+                id: m.id, // Використовуємо серверний ID як основний ID для спрощення
+                url: m.url,
+                type: m.type as 'image' | 'video',
+                name: m.url.split('/').pop() || 'media_file',
+                serverId: m.id,
+                isMain: m.id === projectData.previewMediaId, // Встановлюємо isMain на основі previewMediaId
+                uploadProgress: 100, // Вважаємо, що завантажено
+                isUploading: false,
+                uploadError: false,
+            }));
+
+            // Мапінг співавторів
+            const mappedCollaborators: Collaborator[] = projectData.subauthors.map(s => ({
+                id: s.id,
+                name: s.username,
+                email: s.email,
+                avatar: s.avatarUrl,
+            }));
+
+            // Оновлення стану
+            setProjectName(projectData.title || '');
+            setDescription(projectData.description || '');
+            setDeploymentLink(projectData.demoUrl || '');
+            setGithubLinks(links);
+            setSelectedTechnologies(projectData.technologies || []);
+            setMediaFiles(mappedMedia);
+            setCollaborators(mappedCollaborators);
+            setVisibility(projectData.visible === 'PUBLIC' ? 'public' : 'private');
+
+            // Встановлюємо перше медіа головним, якщо previewMediaId не встановлено
+            if (mappedMedia.length > 0 && !projectData.previewMediaId) {
+                setMediaFiles(prev => prev.map((f, i) => i === 0 ? { ...f, isMain: true } : f));
+            }
+        }
+    }, [isSuccess, projectData]);
+
+    useEffect(() => {
+        // Оновлюємо стан, коли API повертає результат або помилку
+        if (isUserFetching) {
+            setIsSearching(true);
+        } else {
+            setIsSearching(false);
+            if (foundUser) {
+                setSearchedUser(foundUser);
+            } else if (userLookupError) {
+                setSearchedUser(null); // Користувача не знайдено або помилка
+            }
+        }
+    }, [isUserFetching, foundUser, userLookupError]);
+
+    if (isProjectLoading) {
+        return <Loading fullScreen text="Завантаження даних проекту для редагування..." />;
+    }
+
+    if (isProjectError || !projectData) {
+        return (
+            <ErrorMessage
+                fullScreen
+                title="Помилка завантаження проекту"
+                message={ (projectError as any)?.data?.message || `Не вдалося завантажити проект з ID: ${projectId}.`}
+                onDismiss={() => navigate(-1)} // Повернутися назад при помилці
+                onRetry={() => { /* re-fetch logic is handled by RTK Query */ }}
+            />
+        );
+    }
     // --- RENDER ---
     return (
         <div className="min-h-screen bg-background text-foreground relative ">
@@ -229,12 +341,35 @@ export function EditProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                     <div className="space-y-3">
                                         <Label htmlFor="techInput">Технології</Label>
                                         <div className="relative">
-                                            <Input id="techInput" placeholder="React, Node.js..." value={techInput} onChange={handleTechInputChange} onFocus={() => setShowSuggestions(true)} onBlur={() => setTimeout(() => setShowSuggestions(false), 200)} disabled={isTechLoading} className="rounded-2xl bg-secondary/50 backdrop-blur-sm border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20" />
-                                            {showSuggestions && techInput.trim() && filteredSuggestions.length > 0 && ( <div className="absolute z-30 w-full mt-2 bg-card border border-border/50 rounded-xl shadow-xl max-h-60 overflow-y-auto"> {filteredSuggestions.map((tech) => ( <button key={tech.id} type="button" onClick={() => handleAddTechnology(tech)} className="w-full text-left p-3 hover:bg-secondary/50 transition-colors"> {tech.name} </button> ))} </div> )}
+                                            <Input
+                                                id="techInput"
+                                                placeholder="React, Node.js..."
+                                                value={techInput}
+                                                onChange={handleTechInputChange}
+                                                onFocus={() => setShowSuggestions(true)}
+                                                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                                                disabled={isTechLoading}
+                                                className="rounded-2xl bg-secondary/50 backdrop-blur-sm border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                            />
+                                            {showSuggestions && techInput.trim() && filteredSuggestions.length > 0 && (
+                                                <div className="absolute z-20 w-full mt-8 bg-card border border-border/50 rounded-xl shadow-xl max-h-60 overflow-y-auto">
+                                                    {filteredSuggestions.map((tech) => (
+                                                        <button
+                                                            key={tech.id}
+                                                            type="button"
+                                                            // Виправлення: явне приведення типу для коректного виклику handleAddTechnology
+                                                            onClick={() => handleAddTechnology(tech as SelectedTechnology)}
+                                                            className="w-full text-left p-3 hover:bg-secondary/50 transition-colors"
+                                                        >
+                                                            {tech.name}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                         {/* Selected Technologies Display */}
                                         {selectedTechnologies.length > 0 && (
-                                            <div className="flex flex-wrap gap-2 mt-3">
+                                            <div className="flex flex-wrap gap-2 mt-36">
                                                 {selectedTechnologies.map((tech) => ( <Badge key={tech.id} className="bg-gradient-to-r from-primary/20 to-purple-600/20 border border-primary/30 backdrop-blur-sm pl-3 pr-2 py-1.5 gap-2"> {tech.name} <button type="button" onClick={() => handleRemoveTechnology(tech.id)} className="hover:text-destructive transition-colors"><X className="size-3" /></button> </Badge> ))}
                                             </div>
                                         )}
@@ -292,7 +427,35 @@ export function EditProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                         <Label htmlFor="collaboratorEmail">Email співавтора</Label>
                                         <div className="flex gap-2"> <div className="relative flex-1"> <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" /> <Input id="collaboratorEmail" placeholder="email@example.com" value={collaboratorEmail} onChange={(e) => setCollaboratorEmail(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleSearchUser())} disabled={isSearching} className="rounded-2xl bg-secondary/50 backdrop-blur-sm border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20 pl-10" /> </div> <Button type="button" variant="secondary" onClick={handleSearchUser} disabled={isSearching || !collaboratorEmail.trim()} className="flex rounded-xl items-center justify-center hover:scale-105 bg-primary/90 hover:bg-primary gap-2 w-28"> {isSearching ? <Loading /> : <UserPlus className="size-4" />} {isSearching ? 'Пошук...' : 'Знайти'} </Button> </div>
                                         {/* Search Result */}
-                                        <div className="min-h-[70px] pt-2"> {/* Simplified result display */} </div>
+                                        <div className="min-h-[70px] pt-2">
+                                            {searchedUser && (
+                                                <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-2xl border border-primary/30 shadow-md">
+                                                    <div className="flex items-center gap-3">
+                                                        <Avatar className="size-10">
+                                                            <AvatarImage src={searchedUser.avatarUrl} alt={searchedUser.name} />
+                                                            <AvatarFallback className="bg-primary/10 text-primary">{searchedUser.name?.charAt(0) || 'U'}</AvatarFallback>
+                                                        </Avatar>
+                                                        <div>
+                                                            <p className="truncate">{searchedUser.name}</p>
+                                                            <p className="text-sm text-muted-foreground truncate">{searchedUser.email}</p>
+                                                        </div>
+                                                    </div>
+                                                    <Button
+                                                        type="button"
+                                                        onClick={handleAddCollaborator}
+                                                        // Перевірка, чи користувач вже є у списку
+                                                        disabled={collaborators.some(c => c.id === searchedUser.id)}
+                                                        className="rounded-xl flex-shrink-0 bg-green-500/90 hover:bg-green-600/90 gap-1"
+                                                    >
+                                                        <Plus className="size-4" />
+                                                        {collaborators.some(c => c.id === searchedUser.id) ? 'Додано' : 'Додати'}
+                                                    </Button>
+                                                </div>
+                                            )}
+                                            {!isSearching && userLookupError && collaboratorEmail.trim() && (
+                                                <p className="text-sm text-destructive mt-2">Користувача з такою поштою не знайдено.</p>
+                                            )}
+                                        </div>
                                     </div>
                                     {/* Collaborators List */}
                                     {collaborators.length > 0 && (

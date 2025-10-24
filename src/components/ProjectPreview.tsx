@@ -40,10 +40,10 @@ const ProjectPreview: React.FC<PreviewProps> = ({ data, renderMarkdown }) => {
 
             <h2 className="text-xl font-semibold mb-3 flex items-center gap-2"><Code2 className="size-5 text-primary" /> Опис</h2>
             <div
-                className="text-gray-300 prose prose-invert max-w-none text-sm"
+                // ДОДАНО: max-h-[300px] (або інше значення) та overflow-y-auto
+                className="text-gray-300 prose prose-invert max-w-none text-sm max-h-[300px] overflow-y-auto pr-2"
                 dangerouslySetInnerHTML={{ __html: renderMarkdown(data.description || "Тут буде ваш детальний опис проекту...") }}
             />
-
             {data.technologies.length > 0 && (
                 <div className="mt-6">
                     <h3 className="text-lg font-semibold mb-2">Технології</h3>

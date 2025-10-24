@@ -28,7 +28,7 @@ export const router = createBrowserRouter([
         children: [
             { path: "create", element: <CreateProject/> },
             { path: "view/:id", element: <ProjectView />},
-            { path: "edit/:id", element: <EditProjectPage />},
+            { path: "edit/:projectId", element: <EditProjectPage />},
 
         ],
     },
