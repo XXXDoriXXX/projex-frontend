@@ -10,6 +10,7 @@ import Code from "../features/auth/pages/Code.tsx";
 import Profile from "../features/profile/pages/Profile.tsx";
 import ProjectLayout from "../ProjectLayout.tsx";
 import ProjectView from "../features/project/pages/ProjectView.tsx";
+import {EditProjectPage} from "../features/project/pages/EditProjectPage.tsx";
 
 export const router = createBrowserRouter([
     {
@@ -27,6 +28,8 @@ export const router = createBrowserRouter([
         children: [
             { path: "create", element: <CreateProject/> },
             { path: "view/:id", element: <ProjectView />},
+            { path: "edit/:id", element: <EditProjectPage />},
+
         ],
     },
     {
