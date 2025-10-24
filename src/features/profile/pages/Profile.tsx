@@ -125,9 +125,9 @@ const UserProfile = () => {
                         {user.projects.length > 0 ? (
                             user.projects.map((project) => (
                                 <ProjectCard
+                                    onClick={handleNavigate(`/project/view/${project.id}`)}
                                     key={project.id}
                                     project={project}
-                                    onClick={() => handleNavigate(`/project/view/${project.id}`)}
                                 />
                             ))
                         ) : (

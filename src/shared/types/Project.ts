@@ -7,9 +7,13 @@ export interface Project {
     demoUrl: string | null;
     likesCount: number;
     sharesCount: number;
-    tags: string[];
+    technologies: Technology[];
+    status?: string;
 }
-
+export interface Technology {
+    id: string;
+    name: string;
+}
 export interface Author {
     id: string;
     email: string;

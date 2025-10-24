@@ -14,7 +14,17 @@ interface UserLookupResponse {
 }
 export const userApi = createApi({
     reducerPath: 'userApi',
-    baseQuery: fetchBaseQuery({ baseUrl: 'http://localhost:3000/api' }),
+    baseQuery: fetchBaseQuery({
+        baseUrl: 'http://localhost:3000/api',
+        prepareHeaders: (headers, { getState }) => {
+            const token = (getState() as any).auth.token;
+            if (token) {
+                headers.set('Authorization', `Bearer ${token}`);
+            }
+            return headers;
+        }, }
+    ),
+
     endpoints: (builder) => ({
         getUserProfile: builder.query<UserProfile, string>({
             query: (username) => `user/username/${username}`,
