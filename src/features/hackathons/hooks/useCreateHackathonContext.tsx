@@ -1,7 +1,10 @@
 import React, { createContext, useContext, useState, useMemo, type ReactNode } from "react";
-import type {Judge, NewRatingCategory, JudgeLookupData, HackathonStep} from "../types/hackathonTypes";
-import {allRatingCategories} from "../components/steps/StepCriteria.tsx"; // (Припустимо, ти винесеш типи)
-
+import type {Judge, NewRatingCategory, HackathonStep} from "../types/hackathonTypes";
+import {
+    useGetThemeCategoriesQuery,
+    useGetRatingCategoriesQuery,
+    type HackathonThemeCategory, type HackathonRatingCategory
+} from "../api/hackathonApi.ts";
 // 1. Визначаємо, що буде зберігати наш Context
 interface CreateHackathonContextType {
     // Стан DTO
@@ -41,14 +44,6 @@ interface CreateHackathonContextType {
     setNewThemeInput: React.Dispatch<React.SetStateAction<string>>;
     newCategoryInput: string;
     setNewCategoryInput: React.Dispatch<React.SetStateAction<string>>;
-    judgeEmail: string;
-    setJudgeEmail: React.Dispatch<React.SetStateAction<string>>;
-    searchedJudge: JudgeLookupData | null;
-    setSearchedJudge: React.Dispatch<React.SetStateAction<JudgeLookupData | null>>;
-    isSearchingJudge: boolean;
-    setIsSearchingJudge: React.Dispatch<React.SetStateAction<boolean>>;
-    judgeSearchError: boolean;
-    setJudgeSearchError: React.Dispatch<React.SetStateAction<boolean>>;
 
     // Обробники (перенесемо їх сюди)
     handleToggleTheme: (themeId: string) => void;
@@ -57,12 +52,14 @@ interface CreateHackathonContextType {
     handleToggleCategory: (catId: string) => void;
     handleAddNewCategory: () => void;
     handleRemoveNewCategory: (catName: string) => void;
-    handleSearchJudge: () => void; // (або залиш у компоненті, якщо він використовує RTK Query)
-    handleAddJudge: () => void;
-    handleRemoveJudge: (id: string) => void;
 
     // Фінальні дані для відправки
     hackathonData: Record<string, any>;
+    allThemes: HackathonThemeCategory[];
+    isThemesLoading: boolean;
+    allRatingCategories: HackathonRatingCategory[];
+    isCriteriaLoading: boolean;
+
 }
 
 // 2. Створюємо Context
@@ -70,6 +67,9 @@ const CreateHackathonContext = createContext<CreateHackathonContextType | undefi
 
 // 3. Створюємо Провайдер (компонент-обгортку)
 export function CreateHackathonProvider({ children }: { children: ReactNode }) {
+
+    const { data: allThemes = [], isLoading: isThemesLoading } = useGetThemeCategoriesQuery();
+    const { data: allRatingCategories = [], isLoading: isCriteriaLoading } = useGetRatingCategoriesQuery();
     // === ПЕРЕНОСИМО ВСІ useSTATE З CreateHackathonPage СЮДИ ===
     const [title, setTitle] = useState('');
     const [currentStep, setCurrentStep] = useState<HackathonStep>('basics');
@@ -88,8 +88,6 @@ export function CreateHackathonProvider({ children }: { children: ReactNode }) {
     const [showMarkdownPreview, setShowMarkdownPreview] = useState(false);
     const [newThemeInput, setNewThemeInput] = useState('');
     const [newCategoryInput, setNewCategoryInput] = useState('');
-    const [judgeEmail, setJudgeEmail] = useState('');
-    const [searchedJudge, setSearchedJudge] = useState<JudgeLookupData | null>(null);
     const [isSearchingJudge, setIsSearchingJudge] = useState(false);
     const [judgeSearchError, setJudgeSearchError] = useState(false);
 
@@ -136,54 +134,6 @@ export function CreateHackathonProvider({ children }: { children: ReactNode }) {
         setNewRatingCategories(newRatingCategories.filter(c => c.name !== catName));
     };
 
-    // Крок 5: Судді (Заглушка API)
-    const handleSearchJudge = () => {
-        const email = judgeEmail.trim();
-        if (!email) return;
-
-        setIsSearchingJudge(true);
-        setSearchedJudge(null);
-        setJudgeSearchError(false);
-
-        // Імітація запиту до API
-        setTimeout(() => {
-            if (email === "judge@example.com") {
-                setSearchedJudge({
-                    id: 'user-judge-123',
-                    name: 'Олена Петренко',
-                    email: 'judge@example.com',
-                    avatarUrl: 'https://api.dicebear.com/8.x/lorelei/svg?seed=Elena'
-                });
-            } else if (email === "exists@example.com") {
-                setSearchedJudge({
-                    id: 'user-judge-999',
-                    name: 'Ігор Cікорський',
-                    email: 'exists@example.com',
-                    avatarUrl: 'https://api.dicebear.com/8.x/lorelei/svg?seed=Igor'
-                });
-                // Імітуємо, що він вже доданий
-                setJudgeIds([{ id: 'user-judge-999', name: 'Ігор Cікорський', email: 'exists@example.com' }]);
-            }
-            else {
-                setJudgeSearchError(true);
-            }
-            setIsSearchingJudge(false);
-        }, 1000);
-    };
-
-    const handleAddJudge = () => {
-        if (searchedJudge && !judgeIds.find(j => j.id === searchedJudge.id)) {
-            const newJudge: Judge = {
-                id: searchedJudge.id,
-                name: searchedJudge.name,
-                email: searchedJudge.email,
-                avatar: searchedJudge.avatarUrl,
-            };
-            setJudgeIds([...judgeIds, newJudge]);
-            setJudgeEmail('');
-            setSearchedJudge(null);
-        }
-    };
     const handleRemoveJudge = (id: string) => {
         setJudgeIds(judgeIds.filter(c => c.id !== id));
     };
@@ -224,8 +174,6 @@ export function CreateHackathonProvider({ children }: { children: ReactNode }) {
         showMarkdownPreview, setShowMarkdownPreview,
         newThemeInput, setNewThemeInput,
         newCategoryInput, setNewCategoryInput,
-        judgeEmail, setJudgeEmail,
-        searchedJudge, setSearchedJudge,
         isSearchingJudge, setIsSearchingJudge,
         judgeSearchError, setJudgeSearchError,
 
@@ -235,10 +183,11 @@ export function CreateHackathonProvider({ children }: { children: ReactNode }) {
         handleToggleCategory,
         handleAddNewCategory,
         handleRemoveNewCategory,
-        handleSearchJudge,
-        handleAddJudge,
         handleRemoveJudge,
-
+        allThemes,
+        isThemesLoading,
+        allRatingCategories,
+        isCriteriaLoading,
         hackathonData
     };
 

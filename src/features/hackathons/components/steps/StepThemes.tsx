@@ -26,9 +26,14 @@ export function StepThemes(){
         setNewThemeInput,
         handleToggleTheme,
         handleAddNewTheme,
-        handleRemoveNewTheme
+        handleRemoveNewTheme,
+        allThemes,
+        isThemesLoading
 
     } = useCreateHackathon();
+    if (isThemesLoading) {
+        return <div>Завантаження тем...</div>;
+    }
     return( <div className="space-y-6 animate-in fade-in duration-500">
         <div className="flex items-center gap-3 mb-6">
             <div className="size-12 bg-gradient-to-br from-primary to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-primary/30">
