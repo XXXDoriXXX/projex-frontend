@@ -143,7 +143,7 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
     };
     useEffect(() => {
         if(!currentUserId){
-            navigate("/")
+            //navigate("/")
         }
         if (!isFetching) {
             setIsSearching(false);
