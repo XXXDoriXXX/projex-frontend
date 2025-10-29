@@ -3,13 +3,9 @@ import clsx from "clsx";
 
 type Variant = "primary" | "secondary" | "danger" | "ghost" | "glass";
 
-type ButtonProps = {
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     children: React.ReactNode;
-    onClick?: () => void;
-    type?: "button" | "submit" | "reset";
-    className?: string;
     variant?: Variant;
-    disabled?: boolean;
 };
 
 const baseStyles = `
@@ -53,31 +49,32 @@ const variantStyles: Record<Variant, string> = {
     `,
 };
 
-const Button = ({
-                    children,
-                    onClick,
-                    type = "button",
-                    className = "",
-                    variant = "primary",
-                    disabled = false,
-                }: ButtonProps) => {
-    return (
-        <button
-            type={type}
-            onClick={onClick}
-            disabled={disabled}
-            className={clsx(
-                baseStyles,
-                "cursor-pointer",
-                className,
-                variantStyles[variant],
-                disabled && "opacity-50 cursor-not-allowed",
-
-            )}
-        >
-            {children}
-        </button>
-    );
-};
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+    ({
+         children,
+         className = "",
+         variant = "primary",
+         type = "button",
+         ...props
+     }, ref) => {
+        return (
+            <button
+                type={type}
+                className={clsx(
+                    baseStyles,
+                    "cursor-pointer",
+                    className,
+                    variantStyles[variant],
+                    props.disabled && "opacity-50 cursor-not-allowed",
+                )}
+                ref={ref}
+                {...props}
+            >
+                {children}
+            </button>
+        );
+    }
+);
+Button.displayName = "Button";
 
 export default Button;

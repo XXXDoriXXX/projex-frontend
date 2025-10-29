@@ -30,6 +30,8 @@ import {StepSettings} from "../components/steps/StepSettings.tsx";
 import {StepReview} from "../components/steps/StepReview.tsx";
 import {StepCriteria} from "../components/steps/StepCriteria.tsx";
 import {StepJudges} from "../components/steps/StepJudges.tsx";
+import {useCreateHackathonMutation} from "../api/hackathonApi.ts";
+import ErrorMessage from "../../../components/ErrorMessage.tsx";
 
 type HackathonStep = 'basics' | 'schedule' | 'themes' | 'criteria' | 'judges' | 'settings' | 'review';
 
@@ -55,12 +57,12 @@ const stepComponents: Record<HackathonStep, React.ElementType> = {
 
 
 function CreateHackathonLayout() {
-    const [currentStep, setCurrentStep] = useState<HackathonStep>('basics');
     const navigate = useNavigate();
+    const { hackathonData, currentStep, setCurrentStep } = useCreateHackathon();
     const currentStepIndex = steps.findIndex(s => s.id === currentStep);
     const progress = ((currentStepIndex + 1) / steps.length) * 100;
 
-    const { hackathonData } = useCreateHackathon();
+
 
     const canProceed = () => {
         const data = hackathonData;
@@ -95,25 +97,23 @@ function CreateHackathonLayout() {
         return steps.findIndex(s => s.id === stepId) < currentStepIndex;
     };
 
-    const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const [
+        createHackathon,
+        { isLoading: isSubmitting, isError: submitError, error: submitErrorData }
+    ] = useCreateHackathonMutation();
     const handleSubmit = async () => {
-        setIsSubmitting(true);
-        console.log("Submitting Hackathon Data:", hackathonData);
-        // ... твоя логіка API-запиту (напр.
-        // try {
-        //    await createHackathon(hackathonData).unwrap();
-        //    navigate('/success-page');
-        // } catch (err) { ... }
-        // ...
-        setTimeout(() => {
-            setIsSubmitting(false);
-            alert("Хакатон успішно створено (імітація)!");
-            // navigate(`/hackathon/view/NEW_ID`);
-        }, 1500);
-    };
+        try {
+            console.log("Submitting Hackathon Data:", hackathonData);
+            const result = await createHackathon(hackathonData).unwrap();
 
-    // Рендеримо поточний компонент-крок
+            alert("Хакатон успішно створено!");
+            navigate(`/hackathon/view/${result.data.id}`);
+
+        } catch (err) {
+            console.error("Failed to create hackathon:", err);
+        }
+    }
     const CurrentStepComponent = stepComponents[currentStep];
 
     return (
@@ -244,7 +244,15 @@ function CreateHackathonLayout() {
 
                         {/* Step Content */}
                         <div className="bg-card/50 backdrop-blur-2xl border border-border/50 rounded-3xl p-8 shadow-2xl min-h-[600px] flex flex-col">
-
+                            {submitError && (
+                                <ErrorMessage
+                                    fullScreen
+                                    title="Помилка публікації"
+                                    message={(submitErrorData as any)?.data?.message || "Не вдалося створити хакатон."}
+                                    onDismiss={()=>{} }
+                                    onRetry={handleSubmit}
+                                />
+                            )}
                             <div className="flex-1">
                                 {/* РЕНДЕРИМО ПОТРІБНИЙ КРОК */}
                                 <CurrentStepComponent />

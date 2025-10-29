@@ -1,27 +1,21 @@
 import {Calendar as CalendarIcon, CalendarDays} from "lucide-react";
-import {Label} from "../../../../components/label.tsx";
-import {Popover, PopoverContent, PopoverTrigger} from "../../../../components/popover.tsx";
-import Button from "../../../../components/Button.tsx";
-import {format} from "date-fns";
+import {differenceInDays, format} from "date-fns";
 import {Calendar} from "../../../../components/calendar.tsx";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error
 import React from "react";
 import {useCreateHackathon} from "../../hooks/useCreateHackathonContext.tsx";
+import {uk} from "date-fns/locale";
 
 export function StepSchedule(){
     const {
-    startDate,
-    setStartDate,
-    endDate,
-    setEndDate,
-    isStartDatePickerOpen,
-    setIsStartDatePickerOpen,
-    isEndDatePickerOpen,
-    setIsEndDatePickerOpen,
-
+        dateRange,
+        setDateRange
     } = useCreateHackathon();
-
+    let duration = 0;
+    if (dateRange?.from && dateRange?.to) {
+        duration = differenceInDays(dateRange.to, dateRange.from) + 1;
+    }
     return (<div className="space-y-6 animate-in fade-in duration-500">
     <div className="flex items-center gap-3 mb-6">
         <div className="size-12 bg-gradient-to-br from-primary to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-primary/30">
@@ -33,62 +27,34 @@ export function StepSchedule(){
         </div>
     </div>
 
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Date Picker: Start Date */}
-        <div className="space-y-2">
-            <Label htmlFor="startDate">Дата початку *</Label>
-            <Popover open={isStartDatePickerOpen} onOpenChange={setIsStartDatePickerOpen}>
-                <PopoverTrigger asChild>
-                    <Button
-                        variant={"ghost"}
-                        className="w-full justify-start text-left font-normal rounded-2xl bg-secondary/50 backdrop-blur-sm border border-border/50 hover:bg-secondary/70 h-11"
-                    >
-                        <CalendarIcon className="mr-2 size-4" />
-                        {startDate ? format(startDate, "PPP") : <span>Оберіть дату</span>}
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                        mode="single"
-                        selected={startDate}
-                        onSelect={(date) => {
-                            setStartDate(date);
-                            setIsStartDatePickerOpen(false);
-                        }}
-                    />
-                </PopoverContent>
-            </Popover>
-        </div>
+        <div className="flex flex-col items-center gap-4">
+            <Calendar
+                mode="range"
+                selected={dateRange}
+                onSelect={setDateRange}
+                numberOfMonths={2}
+                disabled={{ before: new Date() }}
+                locale={uk}
 
-        {/* Date Picker: End Date */}
-        <div className="space-y-2">
-            <Label htmlFor="endDate">Дата завершення *</Label>
-            <Popover open={isEndDatePickerOpen} onOpenChange={setIsEndDatePickerOpen}>
-                <PopoverTrigger asChild>
-                    <Button
-                        variant={"ghost"}
-                        className="w-full justify-start text-left font-normal rounded-2xl bg-secondary/50 backdrop-blur-sm border border-border/50 hover:bg-secondary/70 h-11"
-                    >
-                        <CalendarIcon className="mr-2 size-4" />
-                        {endDate ? format(endDate, "PPP") : <span>Оберіть дату</span>}
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                        mode="single"
-                        selected={endDate}
-                        onSelect={(date) => {
-                            setEndDate(date);
-                            setIsEndDatePickerOpen(false);
-                        }}
-                        disabled={(date) =>
-                            startDate ? date < startDate : false
-                        }
+                className="rounded-2xl bg-secondary/30 border border-border/50 p-4"
+            />
 
-                    />
-                </PopoverContent>
-            </Popover>
+            {/* Інформаційна панель, яка показує, що обрано */}
+            <div className="p-4 bg-secondary/30 rounded-2xl border border-border/50 w-full text-center">
+                {!dateRange?.from && (
+                    <p className="text-muted-foreground">Оберіть дату початку</p>
+                )}
+                {dateRange?.from && !dateRange.to && (
+                    <p className="text-muted-foreground">Обрано початок: {format(dateRange.from, "PPP", { locale: uk })}. Тепер оберіть дату завершення.</p>
+                )}
+                {dateRange?.from && dateRange.to && (
+                    <div className="text-foreground">
+                        <p>Початок: <span className="font-semibold text-primary">{format(dateRange.from, "PPP", { locale: uk })}</span></p>
+                        <p>Кінець: <span className="font-semibold text-primary">{format(dateRange.to, "PPP", { locale: uk })}</span></p>
+                        <p className="text-sm text-muted-foreground mt-2">Загальна тривалість: {duration} {duration === 1 ? 'день' : (duration > 1 && duration < 5) ? 'дні' : 'днів'}</p>
+                    </div>
+                )}
+            </div>
         </div>
-    </div>
-</div>)
+    </div>)
 }

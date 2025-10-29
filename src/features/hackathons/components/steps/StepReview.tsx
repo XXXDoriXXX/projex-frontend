@@ -8,8 +8,6 @@ import {Avatar, AvatarFallback, AvatarImage} from "../../../../components/avatar
 // @ts-expect-error
 import React from "react";
 import {useCreateHackathon} from "../../hooks/useCreateHackathonContext.tsx";
-import {allRatingCategories} from "./StepCriteria.tsx";
-import {allThemes} from "./StepThemes.tsx";
 
 export function StepReview(){
     const {
@@ -25,7 +23,8 @@ export function StepReview(){
         allowParticipantRating,
         allowPublicRating,
         setCurrentStep,
-
+        allThemes,
+        allRatingCategories
     } = useCreateHackathon();
 
     return(<div className="space-y-6 animate-in fade-in duration-500">

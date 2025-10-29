@@ -5,6 +5,7 @@ import {
     useGetRatingCategoriesQuery,
     type HackathonThemeCategory, type HackathonRatingCategory
 } from "../api/hackathonApi.ts";
+import { type DateRange } from "react-day-picker";
 // 1. Визначаємо, що буде зберігати наш Context
 interface CreateHackathonContextType {
     // Стан DTO
@@ -14,14 +15,8 @@ interface CreateHackathonContextType {
     setTitle: React.Dispatch<React.SetStateAction<string>>;
     description: string;
     setDescription: React.Dispatch<React.SetStateAction<string>>;
-    startDate: Date | undefined;
-    setStartDate: React.Dispatch<React.SetStateAction<Date | undefined>>;
-    endDate: Date | undefined;
-    setEndDate: React.Dispatch<React.SetStateAction<Date | undefined>>;
-    isStartDatePickerOpen: boolean;
-    setIsStartDatePickerOpen: React.Dispatch<React.SetStateAction<boolean>>;
-    isEndDatePickerOpen: boolean;
-    setIsEndDatePickerOpen: React.Dispatch<React.SetStateAction<boolean>>;
+    dateRange: DateRange | undefined;
+    setDateRange: React.Dispatch<React.SetStateAction<DateRange | undefined>>;
     themeIds: string[];
     setThemeIds: React.Dispatch<React.SetStateAction<string[]>>;
     ratingCategoryIds: string[];
@@ -74,10 +69,7 @@ export function CreateHackathonProvider({ children }: { children: ReactNode }) {
     const [title, setTitle] = useState('');
     const [currentStep, setCurrentStep] = useState<HackathonStep>('basics');
     const [description, setDescription] = useState('');
-    const [startDate, setStartDate] = useState<Date | undefined>();
-    const [endDate, setEndDate] = useState<Date | undefined>();
-    const [isStartDatePickerOpen, setIsStartDatePickerOpen] = useState(false);
-    const [isEndDatePickerOpen, setIsEndDatePickerOpen] = useState(false);
+    const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
     const [themeIds, setThemeIds] = useState<string[]>([]);
     const [ratingCategoryIds, setRatingCategoryIds] = useState<string[]>([]);
     const [judgeIds, setJudgeIds] = useState<Judge[]>([]);
@@ -142,15 +134,15 @@ export function CreateHackathonProvider({ children }: { children: ReactNode }) {
     const hackathonData = useMemo(() => {
         return {
             title, description,
-            startDate: startDate?.toISOString(),
-            endDate: endDate?.toISOString(),
+            startDate: dateRange?.from?.toISOString(),
+            endDate: dateRange?.to?.toISOString(),
             themeIds, ratingCategoryIds,
             judgeIds: judgeIds.map(j => j.id),
             newThemes, newRatingCategories,
             allowParticipantRating, allowPublicRating,
         };
     }, [
-        title, description, startDate, endDate, themeIds,
+        title, description, dateRange, themeIds,
         ratingCategoryIds, judgeIds, newThemes, newRatingCategories,
         allowParticipantRating, allowPublicRating
     ]);
@@ -160,10 +152,7 @@ export function CreateHackathonProvider({ children }: { children: ReactNode }) {
         title, setTitle,
         currentStep, setCurrentStep,
         description, setDescription,
-        startDate, setStartDate,
-        endDate, setEndDate,
-        isStartDatePickerOpen, setIsStartDatePickerOpen,
-        isEndDatePickerOpen, setIsEndDatePickerOpen,
+        dateRange, setDateRange,
         themeIds, setThemeIds,
         ratingCategoryIds, setRatingCategoryIds,
         judgeIds, setJudgeIds,
