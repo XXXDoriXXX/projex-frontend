@@ -50,7 +50,7 @@ export interface HackathonWithDetails{
     status: string;
     createdAt: string;
     author: User;
-    judes: User[];
+    judges: User[];
     themes: { id: string; name: string }[];
     ratingCategories: { id: string; name: string; order: number }[];
     participants: { id: string; user: User }[];
