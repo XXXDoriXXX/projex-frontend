@@ -22,6 +22,8 @@ import { HackathonTabs } from "../components/hackathon/HackathonTabs.tsx";
 import { HackathonHeader } from "../components/hackathon/HackathonHeader.tsx";
 import {TabOverview} from "../components/tabs/TabOverview.tsx";
 import {TabLeaderboard} from "../components/tabs/TabLeaderboard.tsx";
+import {TabProjects} from "../components/tabs/TabProjects.tsx";
+import {TabParticipants} from "../components/tabs/TabParticipants.tsx";
 
 export type HackathonTab = "overview" | "projects" | "participants" | "leaderboard" | "submission";
 
@@ -85,6 +87,10 @@ export function HackathonPage() {
                 return <TabOverview hackathon={hackathon} />;
             case "leaderboard":
                 return <TabLeaderboard hackathonId={hackathonId!} />;
+            case "projects":
+                return <TabProjects projects={hackathon.projects} />;
+            case "participants":
+                return <TabParticipants participants={hackathon.participants} />;
             default:
                 return null;
         }
