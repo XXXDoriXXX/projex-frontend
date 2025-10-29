@@ -118,7 +118,6 @@ function CreateHackathonLayout() {
 
     return (
         <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
-            {/* Фон та кнопка "Back to Home" */}
             <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-cyan-500/10" />
             <div className="absolute top-20 right-20 size-96 bg-primary/20 rounded-full blur-3xl" />
             <div className="absolute bottom-20 left-20 size-96 bg-cyan-500/10 rounded-full blur-3xl" />
@@ -242,7 +241,6 @@ function CreateHackathonLayout() {
                             </div>
                         </div>
 
-                        {/* Step Content */}
                         <div className="bg-card/50 backdrop-blur-2xl border border-border/50 rounded-3xl p-8 shadow-2xl min-h-[600px] flex flex-col">
                             {submitError && (
                                 <ErrorMessage
@@ -254,11 +252,8 @@ function CreateHackathonLayout() {
                                 />
                             )}
                             <div className="flex-1">
-                                {/* РЕНДЕРИМО ПОТРІБНИЙ КРОК */}
                                 <CurrentStepComponent />
                             </div>
-
-                            {/* Navigation Buttons (ЗАПОВНЕНО) */}
                             <div className="flex items-center justify-between pt-6 mt-6 border-t border-border/50">
                                 <Button
                                     type="button"
@@ -308,7 +303,7 @@ export function CreateHackathonPage() {
 
     useEffect(() => {
         if(!currentUserId){
-            //navigate("/") // Розкоментуй, коли буде готово
+            //navigate("/")
         }
     }, [currentUserId, navigate]);
 

@@ -46,11 +46,11 @@ export function HackathonPage() {
     const [leaveHackathon, { isLoading: isLeaving }] = useLeaveHackathonMutation();
 
     if (isLoading) {
-        return <Loading fullScreen text="Завантаження хакатону..." />;
+        return <Loading fullScreen text='Завантаження хакатону...' />;
     }
 
     if (isError || !hackathon) {
-        return <ErrorMessage fullScreen title="Помилка" message="Не вдалося завантажити хакатон." onRetry={() => navigate(0)} />;
+        return <ErrorMessage fullScreen title="Помилка" message='Не вдалося завантажити хакатон.' onRetry={() => navigate(0)} />;
     }
 
     const isParticipant = hackathon.participants.some((p: any) => p.user.id === currentUserId);
@@ -67,7 +67,7 @@ export function HackathonPage() {
         if (isJoining) return;
         try {
             await joinHackathon(hackathonId!).unwrap();
-        } catch (err) {
+        } catch (err:any) {
             alert("Не вдалося приєднатися до хакатону.");
         }
     };
@@ -76,7 +76,7 @@ export function HackathonPage() {
         if (isLeaving) return;
         try {
             await leaveHackathon(hackathonId!).unwrap();
-        } catch (err) {
+        } catch (err:any) {
             alert("Не вдалося покинути хакатон.");
         }
     };

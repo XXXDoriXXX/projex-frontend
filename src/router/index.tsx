@@ -13,6 +13,7 @@ import ProjectView from "../features/project/pages/ProjectView.tsx";
 import {EditProjectPage} from "../features/project/pages/EditProjectPage.tsx";
 import CreateHackathonPage from "../features/hackathons/pages/CreateHackathonPage.tsx";
 import HackathonPage from "../features/hackathons/pages/HackathonPage.tsx";
+import EditHackathonPage from "../features/hackathons/pages/EditHackathonPage.tsx";
 
 export const router = createBrowserRouter([
     {
@@ -40,7 +41,7 @@ export const router = createBrowserRouter([
         children: [
             { path: "create", element: <CreateHackathonPage/> },
             { path: "view/:id", element: <HackathonPage />},
-
+            { path: "edit/:id", element: <EditHackathonPage />},
         ],
     },
     {

@@ -5,6 +5,7 @@ import { uk } from "date-fns/locale";
 import {Calendar, Users, Trophy, CheckCircle, Clock, Star} from "lucide-react";
 import { motion } from "framer-motion";
 import type {HackathonWithDetails} from "../../api/hackathonApi.ts";
+import {useNavigate} from "react-router-dom";
 
 interface HackathonHeaderProps {
     hackathon: HackathonWithDetails;
@@ -32,7 +33,10 @@ const InfoCard = ({ icon: Icon, title, value }: any) => (
 );
 
 export function HackathonHeader({ hackathon, isParticipant, isAuthor, onJoin, onLeave, isLoading }: HackathonHeaderProps) {
-
+    const navigate = useNavigate();
+    const handleNavigate = (path: string) => () => {
+        navigate(path);
+    }
     const getStatusInfo = () => {
         switch (hackathon.status) {
             case "OPEN": return { text: "Відкрито", icon: CheckCircle, color: "text-green-400" };
@@ -98,7 +102,7 @@ export function HackathonHeader({ hackathon, isParticipant, isAuthor, onJoin, on
                 variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
             >
                 {isAuthor && (
-                    <Button variant="secondary">Керувати хакатоном</Button>
+                    <Button onClick={handleNavigate(`/hackathon/edit/${hackathon.id}`)} variant="secondary">Керувати хакатоном</Button>
                 )}
 
                 {!isAuthor && isParticipant && (

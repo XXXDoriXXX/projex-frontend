@@ -1,4 +1,3 @@
-// src/features/project/pages/EditProjectPage.tsx
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -18,7 +17,6 @@ import ErrorMessage from '../../../components/ErrorMessage';
 import { Separator } from '../../../components/separator.tsx';
 import ProjectPreview from '../../../components/ProjectPreview';
 
-// --- Icon Imports ---
 import {
     ArrowLeft, Check, ChevronRight, Code2, Edit, Eye, FileText, Github, Globe,
     ImageIcon, LinkIcon, Lock, Mail, Plus, Star, Upload,
@@ -27,7 +25,6 @@ import {
 import {useGetProjectDetailsQuery, useGetTechnologiesQuery,} from "../api/projectApi.ts";
 import {useLazyLookupUserByEmailQuery} from "../../profile/api/userApi.ts";
 
-// --- [TYPE DEFINITIONS & PLACEHOLDERS] ---
 interface MediaFile { id: string; url: string; type: 'image' | 'video'; name: string; isMain: boolean; serverId?: string; uploadProgress: number; isUploading: boolean; uploadError: boolean; }
 interface Collaborator { id: string; name: string; email: string; avatar?: string; }
 interface SelectedTechnology { id: string; name: string; }
@@ -40,7 +37,6 @@ interface CreateProjectPageProps { onNavigateBack?: () => void; }
 const uploadMediaToServer = async (file: File, token: string, onProgress: (p: number) => void): Promise<{ id: string, url: string, type: 'image' | 'video' }> => { /* ... */ return new Promise(resolve => setTimeout(() => resolve({ id: `server-${Date.now()}`, url: URL.createObjectURL(file), type: file.type.startsWith('image') ? 'image' : 'video' }), 500)); };
 
 
-// [NEW] Helper component for Section Header with Toggle
 const SectionHeader = ({ title, icon: Icon, isOpen, onClick }: { title: string, icon: any, isOpen: boolean, onClick: () => void }) => (
     <button
         onClick={onClick}
@@ -61,17 +57,16 @@ export function EditProjectPage({ onNavigateBack }: CreateProjectPageProps) {
     const navigate = useNavigate();
     const {
         data: projectData,
-        isLoading: isProjectLoading, // Новий стан завантаження
-        isError: isProjectError,     // Новий стан помилки
+        isLoading: isProjectLoading,
+        isError: isProjectError,
         error: projectError,
         isSuccess
     } = useGetProjectDetailsQuery(projectId || '', {
-        skip: !projectId, // Пропускаємо запит, якщо projectId відсутній
+        skip: !projectId,
     });
-    // Використовуємо окрему змінну для isTechLoading з хука
+
     const { data: allTechnologies = [], isLoading: isTechsLoading } = useGetTechnologiesQuery();
 
-    // --- State Initialization ---
     const [projectName, setProjectName] = useState('');
     const [visibility, setVisibility] = useState<'public' | 'private'>('public');
     const [githubLinks, setGithubLinks] = useState<string[]>(['']);
@@ -81,7 +76,6 @@ export function EditProjectPage({ onNavigateBack }: CreateProjectPageProps) {
     const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
     const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
 
-    // --- Control States ---
     const [techInput, setTechInput] = useState('');
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [collaboratorEmail, setCollaboratorEmail] = useState('');
@@ -95,12 +89,11 @@ export function EditProjectPage({ onNavigateBack }: CreateProjectPageProps) {
         basics: true, media: false, links: false, details: true, team: false,
     });
     const [searchedUser, setSearchedUser] = useState<UserLookupData | null>(null);
-    const [isSearching, setIsSearching] = useState(false); // Стан для кнопки "Знайти"
+    const [isSearching, setIsSearching] = useState(false);
 
-    // --- Refs and Auth data ---
     const imageInputRef = useRef<HTMLInputElement>(null);
     const videoInputRef = useRef<HTMLInputElement>(null);
-    const isTechLoading = isTechsLoading; // Використовуємо isTechsLoading для елементів, які раніше використовували isTechLoading
+    const isTechLoading = isTechsLoading;
 
     const [
         lookupUser,
@@ -143,11 +136,10 @@ export function EditProjectPage({ onNavigateBack }: CreateProjectPageProps) {
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => { /* Full upload logic here */ };
     const renderMarkdown = (text: string): string => { return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>'); };
 
-    // --- Memos and Submission Check ---
+
     const filteredSuggestions = useMemo(() => {
         const input = techInput.toLowerCase();
 
-        // Використовуємо реальні завантажені технології
         const unselectedTechnologies = allTechnologies.filter(tech => !selectedTechnologies.find(t => t.id === tech.id));
 
         const startsWith = unselectedTechnologies.filter(tech => tech.name.toLowerCase().startsWith(input));
@@ -186,23 +178,23 @@ export function EditProjectPage({ onNavigateBack }: CreateProjectPageProps) {
 
     useEffect(() => {
         if (isSuccess && projectData) {
-            // Розділення githubUrl на масив
+
             const links = projectData.githubUrl ? projectData.githubUrl.split(',').filter(link => link.trim()) : [''];
 
-            // Мапінг медіафайлів (додавання клієнтських станів)
+
             const mappedMedia: MediaFile[] = projectData.media.map(m => ({
-                id: m.id, // Використовуємо серверний ID як основний ID для спрощення
+                id: m.id,
                 url: m.url,
                 type: m.type as 'image' | 'video',
                 name: m.url.split('/').pop() || 'media_file',
                 serverId: m.id,
-                isMain: m.id === projectData.previewMediaId, // Встановлюємо isMain на основі previewMediaId
-                uploadProgress: 100, // Вважаємо, що завантажено
+                isMain: m.id === projectData.previewMediaId,
+                uploadProgress: 100,
                 isUploading: false,
                 uploadError: false,
             }));
 
-            // Мапінг співавторів
+
             const mappedCollaborators: Collaborator[] = projectData.subauthors.map(s => ({
                 id: s.id,
                 name: s.username,
@@ -210,7 +202,6 @@ export function EditProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                 avatar: s.avatarUrl,
             }));
 
-            // Оновлення стану
             setProjectName(projectData.title || '');
             setDescription(projectData.description || '');
             setDeploymentLink(projectData.demoUrl || '');
@@ -220,7 +211,6 @@ export function EditProjectPage({ onNavigateBack }: CreateProjectPageProps) {
             setCollaborators(mappedCollaborators);
             setVisibility(projectData.visible === 'PUBLIC' ? 'public' : 'private');
 
-            // Встановлюємо перше медіа головним, якщо previewMediaId не встановлено
             if (mappedMedia.length > 0 && !projectData.previewMediaId) {
                 setMediaFiles(prev => prev.map((f, i) => i === 0 ? { ...f, isMain: true } : f));
             }
@@ -228,7 +218,6 @@ export function EditProjectPage({ onNavigateBack }: CreateProjectPageProps) {
     }, [isSuccess, projectData]);
 
     useEffect(() => {
-        // Оновлюємо стан, коли API повертає результат або помилку
         if (isUserFetching) {
             setIsSearching(true);
         } else {
@@ -236,7 +225,7 @@ export function EditProjectPage({ onNavigateBack }: CreateProjectPageProps) {
             if (foundUser) {
                 setSearchedUser(foundUser);
             } else if (userLookupError) {
-                setSearchedUser(null); // Користувача не знайдено або помилка
+                setSearchedUser(null);
             }
         }
     }, [isUserFetching, foundUser, userLookupError]);
@@ -251,15 +240,13 @@ export function EditProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                 fullScreen
                 title="Помилка завантаження проекту"
                 message={ (projectError as any)?.data?.message || `Не вдалося завантажити проект з ID: ${projectId}.`}
-                onDismiss={() => navigate(-1)} // Повернутися назад при помилці
-                onRetry={() => { /* re-fetch logic is handled by RTK Query */ }}
+                onDismiss={() => navigate(-1)}
+                onRetry={() => {  }}
             />
         );
     }
-    // --- RENDER ---
     return (
         <div className="min-h-screen bg-background text-foreground relative ">
-            {/* --- Backgrounds & Error Message --- */}
             <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-cyan-500/10" />
             <div className="absolute top-20 right-20 size-96 bg-primary/20 rounded-full blur-3xl" />
             <div className="absolute bottom-20 left-20 size-96 bg-cyan-500/10 rounded-full blur-3xl" />
@@ -269,7 +256,6 @@ export function EditProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                 <ErrorMessage fullScreen title="Помилка оновлення" message={(submitErrorData as any)?.data?.message || "Не вдалося оновити проект."} onDismiss={handleDismissError} onRetry={() => { handleDismissError(); handleSubmit(); }} />
             )}
 
-            {/* --- Main Content Container --- */}
             <div className="max-w-7xl mx-auto px-4 py-24 pt-16 sm:pt-24 min-h-[calc(100vh-6rem)]">
 
                 {/* --- Sticky Header & Action Button --- */}
