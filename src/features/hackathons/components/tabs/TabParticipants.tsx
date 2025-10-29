@@ -1,5 +1,4 @@
-// features/hackathon/components/view/tabs/TabParticipants.tsx
-import React from "react";
+
 import { Avatar, AvatarFallback, AvatarImage } from "../../../../components/avatar.tsx";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";

@@ -1,5 +1,3 @@
-// features/hackathon/components/view/tabs/TabOverview.tsx
-import React from "react";
 
 import { Badge } from "../../../../components/badge.tsx";
 import type {HackathonWithDetails} from "../../api/hackathonApi.ts";

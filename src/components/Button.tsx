@@ -35,7 +35,7 @@ const variantStyles: Record<Variant, string> = {
 `
     ,
     secondary: "bg-gray-700 text-white hover:bg-gray-600 focus:ring-gray-400",
-    danger: "bg-red-500 text-white hover:bg-red-400 focus:ring-red-300",
+    danger: "bg-red-500 text-white hover:bg-red-400 focus:ring-red-300 rounded-md",
     ghost: "bg-transparent text-white hover:bg-white/10 focus:ring-white/20 border border-white/20 hover:scale-110    rounded-full",
     glass: `
         bg-white/10 backdrop-blur-md 

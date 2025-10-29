@@ -302,13 +302,10 @@ function CreateHackathonLayout() {
 }
 
 
-// === Головний Експорт ===
-// Обгортаємо наш Макет у Провайдер
 export function CreateHackathonPage() {
     const currentUserId = useSelector((state: RootState) => state.auth.user?.id);
     const navigate = useNavigate();
 
-    // Перевірка авторизації
     useEffect(() => {
         if(!currentUserId){
             //navigate("/") // Розкоментуй, коли буде готово

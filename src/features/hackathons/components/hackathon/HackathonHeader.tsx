@@ -1,9 +1,8 @@
-// features/hackathon/components/view/HackathonHeader.tsx
-import React from "react";
-import Button from "../../../../components/Button.tsx"; // <--- Твоя анімована кнопка
+
+import Button from "../../../../components/Button.tsx";
 import { format } from "date-fns";
 import { uk } from "date-fns/locale";
-import { Calendar, Users, Trophy, CheckCircle, Clock } from "lucide-react";
+import {Calendar, Users, Trophy, CheckCircle, Clock, Star} from "lucide-react";
 import { motion } from "framer-motion";
 import type {HackathonWithDetails} from "../../api/hackathonApi.ts";
 
@@ -37,7 +36,8 @@ export function HackathonHeader({ hackathon, isParticipant, isAuthor, onJoin, on
     const getStatusInfo = () => {
         switch (hackathon.status) {
             case "OPEN": return { text: "Відкрито", icon: CheckCircle, color: "text-green-400" };
-            case "CLOSED": return { text: "Завершено", icon: Clock, color: "text-yellow-400" };
+            case "RATING": return { text: "Іде оцінювання", icon: Star, color: "text-blue-400" };
+            case "CLOSED": return { text: "Завершено", icon: Trophy, color: "text-yellow-400" };
             case "ARCHIVED": return { text: "В архіві", icon: Clock, color: "text-muted-foreground" };
             default: return { text: "Невідомо", icon: Clock, color: "text-muted-foreground" };
         }
@@ -55,7 +55,6 @@ export function HackathonHeader({ hackathon, isParticipant, isAuthor, onJoin, on
                 visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
             }}
         >
-            {/* Заголовок */}
             <motion.h1
                 className="text-4xl md:text-6xl font-bold text-foreground mb-4"
                 variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
@@ -63,7 +62,6 @@ export function HackathonHeader({ hackathon, isParticipant, isAuthor, onJoin, on
                 {hackathon.title}
             </motion.h1>
 
-            {/* Опис */}
             <motion.p
                 className="text-lg text-muted-foreground max-w-3xl mb-6"
                 variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
@@ -71,7 +69,6 @@ export function HackathonHeader({ hackathon, isParticipant, isAuthor, onJoin, on
                 {hackathon.description}
             </motion.p>
 
-            {/* Інфо-картки */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <InfoCard
                     icon={Calendar}
@@ -89,9 +86,9 @@ export function HackathonHeader({ hackathon, isParticipant, isAuthor, onJoin, on
                     value={hackathon.participants.length}
                 />
                 <InfoCard
-                    icon={Trophy} // Можна замінити на іконку призу
+                    icon={Trophy}
                     title="Призовий фонд"
-                    value="$10,000" // (Приклад)
+                    value="$10,000"
                 />
             </div>
 
@@ -106,7 +103,7 @@ export function HackathonHeader({ hackathon, isParticipant, isAuthor, onJoin, on
 
                 {!isAuthor && isParticipant && (
                     <Button
-                        variant="ghost" // Використовуємо 'ghost' з твого Button.tsx
+                        variant="ghost"
                         onClick={onLeave}
                         disabled={isLoading}
                     >
@@ -116,7 +113,7 @@ export function HackathonHeader({ hackathon, isParticipant, isAuthor, onJoin, on
 
                 {!isAuthor && !isParticipant && hackathon.status === 'OPEN' && (
                     <Button
-                        variant="primary" // <--- Твоя анімована градієнтна кнопка
+                        variant="primary"
                         onClick={onJoin}
                         disabled={isLoading}
                     >
@@ -125,7 +122,9 @@ export function HackathonHeader({ hackathon, isParticipant, isAuthor, onJoin, on
                 )}
 
                 {!isAuthor && !isParticipant && hackathon.status !== 'OPEN' && (
-                    <Button variant="secondary" disabled>Реєстрацію закрито</Button>
+                    <Button variant="secondary" disabled>
+                        {hackathon.status === 'RATING' ? "Реєстрацію закрито (йде оцінювання)" : "Реєстрацію закрито"}
+                    </Button>
                 )}
             </motion.div>
         </motion.div>

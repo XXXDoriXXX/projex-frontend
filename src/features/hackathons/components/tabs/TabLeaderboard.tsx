@@ -1,5 +1,3 @@
-// features/hackathon/components/view/tabs/TabLeaderboard.tsx
-import React from "react";
 
 import Loading from "../../../../components/Loading.tsx";
 import ErrorMessage from "../../../../components/ErrorMessage.tsx";

@@ -1,5 +1,5 @@
 import {createApi, fetchBaseQuery} from "@reduxjs/toolkit/query/react";
-import type {DetailedProject, ProjectDetailsResponse} from "../../../shared/types/Project.ts";
+import type {DetailedProject, Project, ProjectDetailsResponse} from "../../../shared/types/Project.ts";
 
 interface ProjectCreateBody {
     title: string;
@@ -24,8 +24,13 @@ export interface TechnologyResponse {
     data: Technology[];
     message: string;
 }
-
+export interface MyProjectsResponse {
+    success: boolean;
+    data: Project[];
+    message: string;
+}
 const PROJECT_TAG = 'ProjectDetails';
+export const USER_PROJECTS_TAG = 'UserProjects';
 
 export const projectApi = createApi({
     reducerPath: 'projectApi',
@@ -40,7 +45,7 @@ export const projectApi = createApi({
         },
     }),
 
-    tagTypes: [PROJECT_TAG, 'Technology'],
+    tagTypes: [PROJECT_TAG, 'Technology', USER_PROJECTS_TAG],
     endpoints: (builder) => ({
 
         addView: builder.mutation<void, string>({
@@ -68,7 +73,6 @@ export const projectApi = createApi({
 
             invalidatesTags: (result, error, projectId) => [{ type: PROJECT_TAG, id: projectId }],
         }),
-
         createProject: builder.mutation<ProjectCreateResponse, ProjectCreateBody>({
             query: (projectData) => ({
                 url: 'project/create',
@@ -90,6 +94,11 @@ export const projectApi = createApi({
 
             providesTags: (result, error, projectId) => [{ type: PROJECT_TAG, id: projectId }],
         }),
+        getMyProjects: builder.query<Project[], string>({
+            query: (userId) => `project/user/${userId}`,
+            transformResponse: (response: MyProjectsResponse) => response.data,
+            providesTags: (result, error, userId) => [{ type: USER_PROJECTS_TAG, id: userId }],
+        }),
     }),
 });
 
@@ -99,5 +108,6 @@ export const {
     useGetProjectDetailsQuery,
     useAddViewMutation,
     useLikeProjectMutation,
-    useUnlikeProjectMutation
+    useUnlikeProjectMutation,
+    useGetMyProjectsQuery
 } = projectApi;

@@ -1,5 +1,4 @@
-// features/hackathon/components/view/tabs/TabProjects.tsx
-import React from "react";
+
 import ProjectCard from "../../../../components/ProjectCard.tsx"; // <-- Твій компонент картки
 import { Info } from "lucide-react";
 import type {Project} from "../../../../shared/types/Project.ts"; // Іконка для "пустого" стану
@@ -22,7 +21,7 @@ export function TabProjects({ projects }: { projects: Project[] }) {
                 // Передаємо 'project' з 'hackathonProject' у твій ProjectCard
                 <ProjectCard
                     key={hackathonProject.id}
-                    project={hackathonProject.project}
+                    project={hackathonProject}
                     // Тут ти можеш додати пропси для відображення рейтингу, якщо картка це підтримує
                     // averageRating={...}
                 />

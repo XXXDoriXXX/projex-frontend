@@ -6,7 +6,7 @@ export interface Project {
     githubUrl: string | null;
     demoUrl: string | null;
     likesCount: number;
-    sharesCount: number;
+    viewsCount: number;
     technologies: Technology[];
     status?: string;
 }

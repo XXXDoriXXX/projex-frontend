@@ -1,6 +1,7 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import type {User} from "../../../shared/types/user.ts";
-
+import type {Project} from "../../../shared/types/Project.ts";
+import {USER_PROJECTS_TAG} from "../../project/api/projectApi.ts";
 
 export interface CreateHackathonDto {
     title: string;
@@ -41,7 +42,6 @@ export interface HackathonListResponse {
     message: string;
 }
 export interface HackathonWithDetails{
-    // Визначення полів відповідно до вашої моделі
     id: string;
     title: string;
     description: string;
@@ -54,6 +54,9 @@ export interface HackathonWithDetails{
     themes: { id: string; name: string }[];
     ratingCategories: { id: string; name: string; order: number }[];
     participants: { id: string; user: User }[];
+    projects: HackathonProject[];
+    allowParticipantRating: boolean;
+    allowPublicRating: boolean;
 }
 export interface HackathonDetailsResponse {
     success: boolean;
@@ -98,12 +101,24 @@ export interface LeaderboardResponse {
     data: LeaderboardEntry[];
     message: string;
 }
-
+export interface MyProjectsResponse {
+    success: boolean;
+    data: HackathonProject[];
+    message?: string;
+}
+export interface HackathonProject extends Project {
+    hpId: string;
+}
+export interface HackathonProjectWithDetails {
+    hpId: string;
+    projectId: string;
+    project: HackathonProject;
+}
 const HACKATHON_LIST_TAG = 'HackathonList';
 const HACKATHON_DETAILS_TAG = 'HackathonDetails';
 const HACKATHON_LEADERBOARD_TAG = 'HackathonLeaderboard';
 const HACKATHON_CATEGORIES_TAG = 'HackathonCategories';
-
+const HACKATHON_MY_PROJECTS_TAG = 'HackathonMyProjects';
 
 export const hackathonApi = createApi({
     reducerPath: 'hackathonApi',
@@ -122,7 +137,9 @@ export const hackathonApi = createApi({
         HACKATHON_LIST_TAG,
         HACKATHON_DETAILS_TAG,
         HACKATHON_LEADERBOARD_TAG,
-        HACKATHON_CATEGORIES_TAG
+        HACKATHON_CATEGORIES_TAG,
+        HACKATHON_MY_PROJECTS_TAG,
+        USER_PROJECTS_TAG
     ],
 
     endpoints: (builder) => ({
@@ -167,7 +184,7 @@ export const hackathonApi = createApi({
         }),
 
         // 5. router.get('/:id', hackathonController.getHackathonById);
-        getHackathonById: builder.query<any, string>({ // Заміни 'any' на HackathonWithDetails
+        getHackathonById: builder.query<HackathonWithDetails, string>({
             query: (id) => `/${id}`,
             transformResponse: (response: HackathonDetailsResponse) => response.data,
             providesTags: (result, error, id) => [{ type: HACKATHON_DETAILS_TAG, id }],
@@ -199,7 +216,9 @@ export const hackathonApi = createApi({
                 body: body,
             }),
             invalidatesTags: (result, error, { hackathonId }) => [
-                { type: HACKATHON_DETAILS_TAG, id: hackathonId }
+                { type: HACKATHON_DETAILS_TAG, id: hackathonId },
+                { type: HACKATHON_MY_PROJECTS_TAG, id: hackathonId },
+                USER_PROJECTS_TAG
             ],
         }),
 
@@ -210,7 +229,11 @@ export const hackathonApi = createApi({
                 method: 'DELETE',
             }),
             // Не знаючи hackathonId, ми змушені інвалідувати всі детальні теги
-            invalidatesTags: [HACKATHON_DETAILS_TAG],
+            invalidatesTags: [
+                HACKATHON_DETAILS_TAG,
+                HACKATHON_MY_PROJECTS_TAG,
+                USER_PROJECTS_TAG
+            ],
         }),
 
         // 10. router.post('/project/:hpId/rate', authenticate, hackathonController.rateProject);
@@ -244,6 +267,13 @@ export const hackathonApi = createApi({
             transformResponse: (response: RatingCategoryListResponse) => response.data,
             providesTags: [HACKATHON_CATEGORIES_TAG],
         }),
+        getMyHackathonProjects: builder.query<HackathonProject[], string>({
+            query: (hackathonId) => `/${hackathonId}/my-projects`,
+            transformResponse: (response: MyProjectsResponse) => response.data,
+            providesTags: (result, error, hackathonId) => [
+                { type: HACKATHON_MY_PROJECTS_TAG, id: hackathonId }
+            ],
+        }),
 
     }),
 });
@@ -262,4 +292,5 @@ export const {
     useGetLeaderboardQuery,
     useGetThemeCategoriesQuery,
     useGetRatingCategoriesQuery,
+    useGetMyHackathonProjectsQuery
 } = hackathonApi;

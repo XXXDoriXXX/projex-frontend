@@ -2,6 +2,7 @@ import React from 'react';
 import type {Project} from "../shared/types/Project.ts";
 import {Archive, Edit} from "lucide-react";
 import {Badge} from "./badge.tsx";
+import {useNavigate} from "react-router-dom";
 
 const Tag = ({text}: { text: string }) => (
     <span className="bg-purple-500/20 text-purple-200 text-xs font-semibold px-3 py-1 rounded-full">
@@ -11,7 +12,6 @@ const Tag = ({text}: { text: string }) => (
 interface StatusBadgeProps {
     status: string;
 }
-
 const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
     let classes = 'bg-gray-700 text-gray-300';
     let icon = null;
@@ -28,7 +28,6 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
             icon = <Archive className="size-3" />;
             label = 'Архів';
             break;
-        // Для PUBLISHED (коли status === null/undefined) ми нічого не показуємо
         default:
             return null;
     }
@@ -44,21 +43,33 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
 interface ProjectCardProps {
     project: Project,
     onClick?: () => void
+    className?: string
 }
 
-const ProjectCard: React.FC<ProjectCardProps> = ({project, onClick}) => {
+const ProjectCard = React.forwardRef<HTMLDivElement, ProjectCardProps>(
+    ({project, onClick, className}, ref) => {
     const tags = project.technologies || [];
-    const showStatusBadge = project.status && project.status !== 'PUBLISHED';
+        const navigate = useNavigate();
+        const handleNavigate = (path: string) => () => {
+            console.log("Navigating to:", path);
+            navigate(path);
+        }
+        const showStatusBadge = project.status && project.status !== 'PUBLISHED';
     const handleExternalLinkClick = (e: React.MouseEvent) => {
         e.stopPropagation();
     };
     return (
-        <div  onClick={onClick} className="
-            relative rounded-2xl overflow-hidden shadow-lg
-            bg-gray-800/50 border border-white/10
-            transform transition-all duration-300 hover:scale-105
-            group cursor-pointer
-        ">
+        <div
+            ref={ref}
+            onClick={handleNavigate(`/project/view/${project.id}`)}
+            className={`
+                relative rounded-2xl overflow-hidden shadow-lg
+                bg-gray-800/50 border border-white/10
+                transform transition-all duration-300 hover:scale-105
+                group cursor-pointer
+                ${className || ''} 
+            `}
+        >
             {/* Прев'ю зображення */}
             <div className="relative" >
                 <img
@@ -74,7 +85,6 @@ const ProjectCard: React.FC<ProjectCardProps> = ({project, onClick}) => {
                 <a
                     href={project.demoUrl || project.githubUrl}
                     target="_blank"
-                    onClick={handleExternalLinkClick}
                     rel="noopener noreferrer"
                     className="
                         absolute top-4 right-4 p-2 rounded-full
@@ -150,6 +160,6 @@ const ProjectCard: React.FC<ProjectCardProps> = ({project, onClick}) => {
             </div>
         </div>
     );
-};
-
+});
+ProjectCard.displayName = "ProjectCard";
 export default ProjectCard;
