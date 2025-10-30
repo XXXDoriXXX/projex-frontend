@@ -34,12 +34,18 @@ export interface SimpleHackathon {
     title: string;
     startDate: string;
     endDate: string;
-    author: { name: string }; // Приклад
+    status: string;
+    authorId: string;
 }
 export interface HackathonListResponse {
     success: boolean;
     data: SimpleHackathon[];
-    message: string;
+    nextCursor: string | null;
+    message?: string;
+}
+export interface TransformedHackathonResponse {
+    hackathons: SimpleHackathon[];
+    nextCursor: string | null;
 }
 export interface HackathonWithDetails{
     id: string;
@@ -68,6 +74,13 @@ export interface HackathonCreateResponse {
     success: boolean;
     data: { id: string; title: string };
     message: string;
+}
+
+export interface HackathonListParams {
+    cursor?: string;
+    search?: string;
+    status?: 'ALL' | 'OPEN' | 'RATING' | 'CLOSED' | 'ARCHIVED';
+    limit?: number;
 }
 
 export interface HackathonThemeCategory {
@@ -123,7 +136,7 @@ const HACKATHON_MY_PROJECTS_TAG = 'HackathonMyProjects';
 export const hackathonApi = createApi({
     reducerPath: 'hackathonApi',
     baseQuery: fetchBaseQuery({
-        baseUrl: 'http://localhost:3000/api/hackathon', // Базовий URL для хакатонів
+        baseUrl: 'http://localhost:3000/api/hackathon',
         prepareHeaders: (headers, { getState }) => {
             const token = (getState() as any).auth.token;
             if (token) {
@@ -177,11 +190,55 @@ export const hackathonApi = createApi({
         }),
 
         // 4. router.get('/', hackathonController.getAllHackathons);
-        getAllHackathons: builder.query<SimpleHackathon[], void>({
-            query: () => '/',
-            transformResponse: (response: HackathonListResponse) => response.data,
-            providesTags: [HACKATHON_LIST_TAG],
+        getHackathons: builder.query<TransformedHackathonResponse, HackathonListParams>({
+            query: (params) => ({
+                url: '/',
+                method: 'GET',
+                params: {
+                    search: params.search || undefined,
+                    status: params.status === 'ALL' ? undefined : params.status,
+                    cursor: params.cursor || undefined,
+                    limit: params.limit || 9,
+                },
+            }),
+
+            transformResponse: (response: HackathonListResponse) => ({
+                hackathons: response.data,
+                nextCursor: response.nextCursor,
+            }),
+
+            serializeQueryArgs: ({ queryArgs }) => {
+                const { cursor, limit, ...filterArgs } = queryArgs;
+                return JSON.stringify(filterArgs);
+            },
+
+            merge: (currentCache, newItems, { arg }) => {
+                if (!arg?.cursor) {
+
+                    currentCache.hackathons = newItems.hackathons;
+                } else {
+
+                    const existingIds = new Set(currentCache.hackathons.map(h => h.id));
+                    const uniqueNewHackathons = newItems.hackathons.filter(
+                        h => !existingIds.has(h.id)
+                    );
+                    currentCache.hackathons.push(...uniqueNewHackathons);
+                }
+                currentCache.nextCursor = newItems.nextCursor;
+            },
+
+            forceRefetch({ currentArg, previousArg }) {
+                return (
+                    currentArg?.cursor !== previousArg?.cursor ||
+                    currentArg?.search !== previousArg?.search ||
+                    currentArg?.status !== previousArg?.status ||
+                    currentArg?.limit !== previousArg?.limit
+                );
+            },
         }),
+
+
+
 
         // 5. router.get('/:id', hackathonController.getHackathonById);
         getHackathonById: builder.query<HackathonWithDetails, string>({
@@ -282,7 +339,8 @@ export const {
     useCreateHackathonMutation,
     useUpdateHackathonMutation,
     useDeleteHackathonMutation,
-    useGetAllHackathonsQuery,
+    useGetHackathonsQuery,
+    useLazyGetHackathonsQuery,
     useGetHackathonByIdQuery,
     useJoinHackathonMutation,
     useLeaveHackathonMutation,

@@ -1,10 +1,10 @@
-
 import {Loader2} from "lucide-react";
 
 interface LoadingSpinnerProps {
-    size?: 'sm' | 'md' | 'lg' | 'xl';
-    text?: string;
-    fullScreen?: boolean;
+    size?: 'sm' | 'md' | 'lg' | 'xl',
+    text?: string,
+    fullScreen?: boolean,
+    className?: string
 }
 
 const sizeClasses = {
@@ -14,12 +14,13 @@ const sizeClasses = {
     xl: 'size-12'
 };
 
-function Loading({size = 'md', text, fullScreen = false}: LoadingSpinnerProps)  {
+function Loading({size = 'md', text, fullScreen = false, className=""}: LoadingSpinnerProps) {
     const spinner = (
-        <div className="flex flex-col items-center justify-center gap-3">
+        <div className={`flex flex-col items-center justify-center gap-3 ${className}`}>
             <div className="relative">
                 {/* Animated gradient ring */}
-                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary via-purple-600 to-pink-500 opacity-20 blur-xl animate-pulse" />
+                <div
+                    className="absolute inset-0 rounded-full bg-gradient-to-r from-primary via-purple-600 to-pink-500 opacity-20 blur-xl animate-pulse"/>
 
                 {/* Spinner */}
                 <Loader2

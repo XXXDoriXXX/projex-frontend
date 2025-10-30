@@ -18,7 +18,26 @@ export interface Technology {
     id: string;
     name: string;
 }
+export interface ProjectListParams {
+    cursor?: string;
+    search?: string;
+    technologies?: string[];
+    authorId?: string;
+    sortBy?: 'popular' | 'newest';
+    limit?: number;
+}
 
+export interface ProjectListResponse {
+    success: boolean;
+    data: Project[];
+    nextCursor: string | null;
+    message?: string;
+}
+
+export interface TransformedProjectResponse {
+    projects: Project[];
+    nextCursor: string | null;
+}
 export interface TechnologyResponse {
     success: boolean;
     data: Technology[];
@@ -31,6 +50,7 @@ export interface MyProjectsResponse {
 }
 const PROJECT_TAG = 'ProjectDetails';
 export const USER_PROJECTS_TAG = 'UserProjects';
+const PROJECT_LIST_TAG = 'ProjectList';
 
 export const projectApi = createApi({
     reducerPath: 'projectApi',
@@ -45,7 +65,7 @@ export const projectApi = createApi({
         },
     }),
 
-    tagTypes: [PROJECT_TAG, 'Technology', USER_PROJECTS_TAG],
+    tagTypes: [PROJECT_TAG, 'Technology', USER_PROJECTS_TAG, PROJECT_LIST_TAG],
     endpoints: (builder) => ({
 
         addView: builder.mutation<void, string>({
@@ -56,7 +76,46 @@ export const projectApi = createApi({
 
             invalidatesTags: (result, error, projectId) => [{ type: PROJECT_TAG, id: projectId }],
         }),
+        getProjects: builder.query<TransformedProjectResponse, ProjectListParams>({
+            query: (params) => ({
+                url: 'project/',
+                method: 'GET',
+                params: {
+                    search: params.search || undefined,
+                    technologies: params.technologies && params.technologies.length > 0 ? params.technologies : undefined,
+                    authorId: params.authorId || undefined,
+                    cursor: params.cursor || undefined,
+                    limit: params.limit || 9,
+                },
+            }),
+            transformResponse: (response: ProjectListResponse) => ({
+                projects: response.data,
+                nextCursor: response.nextCursor,
+            }),
+            serializeQueryArgs: ({ queryArgs }) => {
+                const { cursor, limit, ...filterArgs } = queryArgs;
+                return JSON.stringify(filterArgs);
+            },
+            merge: (currentCache, newItems, { arg }) => {
+                if (!arg?.cursor) {
 
+                    currentCache.projects = newItems.projects;
+                } else {
+
+                    const existingIds = new Set(currentCache.projects.map(p => p.id));
+                    const uniqueNewProjects = newItems.projects.filter(
+                        p => !existingIds.has(p.id)
+                    );
+                    currentCache.projects.push(...uniqueNewProjects);
+                }
+                currentCache.nextCursor = newItems.nextCursor;
+            },
+            forceRefetch({ currentArg, previousArg }) {
+
+                return JSON.stringify(currentArg) !== JSON.stringify(previousArg);
+            },
+            providesTags: [PROJECT_LIST_TAG],
+        }),
         likeProject: builder.mutation<void, string>({
             query: (projectId) => ({
                 url: `project/like/${projectId}`,
@@ -79,6 +138,7 @@ export const projectApi = createApi({
                 method: 'POST',
                 body: projectData,
             }),
+            invalidatesTags: [USER_PROJECTS_TAG, PROJECT_LIST_TAG]
         }),
 
         getTechnologies: builder.query<Technology[], void>({
@@ -109,5 +169,7 @@ export const {
     useAddViewMutation,
     useLikeProjectMutation,
     useUnlikeProjectMutation,
-    useGetMyProjectsQuery
+    useGetMyProjectsQuery,
+    useGetProjectsQuery,
+    useLazyGetProjectsQuery
 } = projectApi;
