@@ -12,13 +12,15 @@ import {
     ArrowLeft,
     Video,
     Share,
-    FilePenLine
+    FilePenLine, Archive, ArchiveRestore, UploadCloud
 } from 'lucide-react';
 import {
+    type ProjectStatus,
     useAddViewMutation,
     useGetProjectDetailsQuery,
     useLikeProjectMutation,
-    useUnlikeProjectMutation
+    useUnlikeProjectMutation,
+    useUpdateProjectStatusMutation
 } from "../api/projectApi.ts";
 import Loading from "../../../components/Loading.tsx";
 import ErrorMessage from "../../../components/ErrorMessage.tsx";
@@ -55,19 +57,21 @@ export default function ProjectPage({ onNavigateBack }: ProjectViewPageProps) {
     const [likeProject, { isLoading: isLiking, error: likeError }] = useLikeProjectMutation();
     const [unlikeProject, { isLoading: isUnliking, error: unlikeError }] = useUnlikeProjectMutation();
 
+    const [updateProjectStatus, { isLoading: isUpdatingStatus, error: statusError }] = useUpdateProjectStatusMutation();
+
     const [apiError, setApiError] = useState<string | null>(null);
     const [selectedMedia, setSelectedMedia] = useState<any>(null);
     const currentUserId = useSelector((state: RootState) => state.auth.user?.id);
     useEffect(() => {
-        const error = likeError || unlikeError;
+        const error = likeError || unlikeError || statusError
         if (error) {
-        console.log((error as any).data?.error.message);
+            console.log((error as any).data?.error.message);
             const message = (error as any).data?.error.message
                 || (error as any).error
                 || 'unknown error occurred. Please try again.';
             setApiError(message);
         }
-    }, [likeError, unlikeError]);
+    }, [likeError, unlikeError, statusError]);
     React.useEffect(() => {
         if (projectData && !selectedMedia) {
             setSelectedMedia(projectData.media.length > 0 ? projectData.media[0] : null);
@@ -128,6 +132,16 @@ export default function ProjectPage({ onNavigateBack }: ProjectViewPageProps) {
             />
         );
     }
+    const handleChangeStatus = async (newStatus: ProjectStatus) => {
+        setApiError(null);
+        if (!id || isUpdatingStatus) return;
+
+        try {
+            await updateProjectStatus({ id, status: newStatus }).unwrap();
+        } catch (err) {
+            console.error("Failed to update status:", err);
+        }
+    };
 
     const githubLinks = projectData.githubUrl ? projectData.githubUrl.split(',').filter(link => link.trim()) : [];
     const fadeTransition = {
@@ -146,79 +160,132 @@ export default function ProjectPage({ onNavigateBack }: ProjectViewPageProps) {
             {/* Header */}
             <div className="sticky top-0 z-50 backdrop-blur-xl bg-[#0d1117]/80 border-b border-white/10">
 
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                    {onNavigateBack && (
-                        <button
-                            onClick={onNavigateBack}
-                            className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-4"
-                        >
-                            <ArrowLeft className="w-4 h-4" />
-                            <span>Back to Profile</span>
-                        </button>
-                    )}
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                        <div>
-                            <h1 className="text-3xl font-bold text-white mb-2">{projectData.title}</h1>
-                            <div className="flex items-center gap-4 text-sm text-gray-400">
-                                <div className="flex items-center gap-2">
-                                    <Eye className="w-4 h-4" />
-                                    <span>{projectData.viewsCount} views</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Heart
-                                        className={`w-4 h-4 cursor-pointer transition-colors ${
-                                            isLiked ? 'fill-[#8b5cf6] text-[#8b5cf6]' : 'text-gray-400'
-                                        }`}
-                                        onClick={handleLike}
-                                    />
-                                    {/* ВИПРАВЛЕННЯ: Відображаємо тільки фактичну кількість лайків */}
-                                    <span>{projectData.likesCount} likes</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Calendar className="w-4 h-4" />
-                                    <span>{new Date(projectData.createdAt).toLocaleDateString()}</span>
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                        {onNavigateBack && (
+                            <button
+                                onClick={onNavigateBack}
+                                className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-4"
+                            >
+                                <ArrowLeft className="w-4 h-4" />
+                                <span>Back to Profile</span>
+                            </button>
+                        )}
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                            <div>
+                                <h1 className="text-3xl font-bold text-white mb-2">{projectData.title}</h1>
+                                <div className="flex items-center gap-4 text-sm text-gray-400">
+                                    <div className="flex items-center gap-2">
+                                        <Eye className="w-4 h-4" />
+                                        <span>{projectData.viewsCount} views</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Heart
+                                            className={`w-4 h-4 cursor-pointer transition-colors ${
+                                                isLiked ? 'fill-[#8b5cf6] text-[#8b5cf6]' : 'text-gray-400'
+                                            }`}
+                                            onClick={handleLike}
+                                        />
+                                        {/* ВИПРАВЛЕННЯ: Відображаємо тільки фактичну кількість лайків */}
+                                        <span>{projectData.likesCount} likes</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Calendar className="w-4 h-4" />
+                                        <span>{new Date(projectData.createdAt).toLocaleDateString()}</span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="flex flex-wrap gap-3">
-                            {isOwner && (
-                                <Button
-                                    variant={"ghost"}
-                                    onClick={handleEdit}
-                                    className="flex w-auto items-center justify-center border-yellow-500/50 text-yellow-500 hover:bg-yellow-500/10 hover:text-yellow-400"
-                                >
-                                    <FilePenLine className="w-4 h-4 mr-2" />
-                                    Edit Project
-                                </Button>
-                            )}
-                            {projectData.githubUrl && (
-                                githubLinks.map((link, index) => (
+                            <div className="flex flex-wrap gap-3">
+                                {isOwner && (
+                                    <>
+                                        <Button
+                                            variant={"ghost"}
+                                            onClick={handleEdit}
+                                            className="flex w-auto items-center justify-center border-yellow-500/50 text-yellow-500 hover:bg-yellow-500/10 hover:text-yellow-400"
+                                        >
+                                            <FilePenLine className="w-4 h-4 mr-2" />
+                                            Edit Project
+                                        </Button>
+
+                                        {/* --- Кнопки для DRAFT --- */}
+                                        {projectData.status === 'DRAFT' && (
+                                            <>
+                                                <Button
+                                                    variant={"ghost"}
+                                                    onClick={() => handleChangeStatus('PUBLISHED')}
+                                                    disabled={isUpdatingStatus}
+                                                    className="flex w-auto items-center justify-center border-green-500/50 text-green-500 hover:bg-green-500/10 hover:text-green-400"
+                                                >
+                                                    <UploadCloud className="w-4 h-4 mr-2" />
+                                                    {isUpdatingStatus ? 'Publishing...' : 'Publish'}
+                                                </Button>
+                                                <Button
+                                                    variant={"ghost"}
+                                                    onClick={() => handleChangeStatus('ARCHIVED')}
+                                                    disabled={isUpdatingStatus}
+                                                    className="flex w-auto items-center justify-center border-red-500/50 text-red-500 hover:bg-red-500/10 hover:text-red-400"
+                                                >
+                                                    <Archive className="w-4 h-4 mr-2" />
+                                                    {isUpdatingStatus ? 'Archiving...' : 'Archive'}
+                                                </Button>
+                                            </>
+                                        )}
+
+                                        {/* --- Кнопка для PUBLISHED --- */}
+                                        {projectData.status === 'PUBLISHED' && (
+                                            <Button
+                                                variant={"ghost"}
+                                                onClick={() => handleChangeStatus('ARCHIVED')}
+                                                disabled={isUpdatingStatus}
+                                                className="flex w-auto items-center justify-center border-red-500/50 text-red-500 hover:bg-red-500/10 hover:text-red-400"
+                                            >
+                                                <Archive className="w-4 h-4 mr-2" />
+                                                {isUpdatingStatus ? 'Archiving...' : 'Archive'}
+                                            </Button>
+                                        )}
+
+                                        {/* --- Кнопка для ARCHIVED --- */}
+                                        {projectData.status === 'ARCHIVED' && (
+                                            <Button
+                                                variant={"ghost"}
+                                                onClick={() => handleChangeStatus('PUBLISHED')}
+                                                disabled={isUpdatingStatus}
+                                                className="flex w-auto items-center justify-center border-blue-500/50 text-blue-500 hover:bg-blue-500/10 hover:text-blue-400"
+                                            >
+                                                <ArchiveRestore className="w-4 h-4 mr-2" />
+                                                {isUpdatingStatus ? 'Publishing...' : 'Re-Publish'}
+                                            </Button>
+                                        )}
+                                    </>
+                                )}
+
+                                {/* ... (Кнопки GitHub та Live Demo без змін) ... */}
+                                {projectData.githubUrl && (
+                                    githubLinks.map((link, index) => (
+                                        <Button
+                                            variant={"ghost"}
+                                            key={index}
+                                            onClick={() => window.open(link, '_blank')}
+                                            className=" flex w-auto items-center justify-center"
+                                        >
+                                            <Github className="w-4 h-4 mr-2" />
+                                            GitHub {githubLinks.length > 1 ? `(${index + 1})` : ''}
+                                        </Button>
+                                    ))
+                                )}
+                                {projectData.demoUrl && (
                                     <Button
-                                        variant={"ghost"}
-                                        key={index}
-                                        onClick={() => window.open(link, '_blank')}
-                                        className=" flex w-auto items-center justify-center"
+                                        onClick={() => window.open(projectData.demoUrl, '_blank')}
+                                        className="bg-[#8b5cf6] hover:bg-[#7c3aed] text-white transition-all duration-300"
                                     >
-                                        <Github className="w-4 h-4 mr-2" />
-                                        GitHub {githubLinks.length > 1 ? `(${index + 1})` : ''}
+                                        <ExternalLink className="w-4 h-4 mr-2" />
+                                        Live Demo
                                     </Button>
-                                ))
-                            )}
-                            {projectData.demoUrl && (
-                                <Button
-                                    onClick={() => window.open(projectData.demoUrl, '_blank')}
-                                    className="bg-[#8b5cf6] hover:bg-[#7c3aed] text-white transition-all duration-300"
-                                >
-                                    <ExternalLink className="w-4 h-4 mr-2" />
-                                    Live Demo
-                                </Button>
-                            )}
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-
             {/* Main Content */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

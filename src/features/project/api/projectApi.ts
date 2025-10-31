@@ -9,6 +9,27 @@ interface ProjectCreateBody {
     mediaIds?: string[];
     technologies: string[];
 }
+interface UpdateProjectDto {
+    title?: string;
+    description?: string;
+    githubUrl?: string;
+    demoUrl?: string;
+    mediaIds?: string[];
+    technologies?: string[];
+    subauthorIds?: string[];
+    previewId?: string | null;
+    visible?: 'PUBLIC' | 'PRIVATE';
+}
+interface UploadMediaData {
+    id: string;
+    url: string;
+    type: 'image' | 'video';
+}
+interface UploadMediaResponse {
+    success: boolean;
+    data: UploadMediaData;
+    message: string;
+}
 interface ProjectCreateResponse {
     success: boolean;
     data: { id: string; title: string };
@@ -26,7 +47,7 @@ export interface ProjectListParams {
     sortBy?: 'popular' | 'newest';
     limit?: number;
 }
-
+export type ProjectStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
 export interface ProjectListResponse {
     success: boolean;
     data: Project[];
@@ -75,6 +96,27 @@ export const projectApi = createApi({
             }),
 
             invalidatesTags: (result, error, projectId) => [{ type: PROJECT_TAG, id: projectId }],
+        }),
+        updateProject: builder.mutation<void, { id: string, body: UpdateProjectDto }>({
+            query: ({ id, body }) => ({
+                url: `project/${id}`,
+                method: 'PUT',
+                body,
+            }),
+            invalidatesTags: (result, error, { id }) => [
+                { type: PROJECT_TAG, id },
+                PROJECT_LIST_TAG,
+                USER_PROJECTS_TAG
+            ],
+        }),
+        uploadMedia: builder.mutation<UploadMediaResponse, FormData>({
+            query: (formData) => ({
+                url: 'project/upload-media',
+                method: 'POST',
+                body: formData,
+
+            }),
+
         }),
         getProjects: builder.query<TransformedProjectResponse, ProjectListParams>({
             query: (params) => ({
@@ -159,6 +201,18 @@ export const projectApi = createApi({
             transformResponse: (response: MyProjectsResponse) => response.data,
             providesTags: (result, error, userId) => [{ type: USER_PROJECTS_TAG, id: userId }],
         }),
+        updateProjectStatus: builder.mutation<void, { id: string, status: ProjectStatus }>({
+            query: ({ id, status }) => ({
+                url: `project/${id}/status`,
+                method: 'PATCH',
+                body: { status },
+            }),
+            invalidatesTags: (result, error, { id }) => [
+                { type: PROJECT_TAG, id },
+                PROJECT_LIST_TAG,
+                USER_PROJECTS_TAG
+            ],
+        }),
     }),
 });
 
@@ -171,5 +225,8 @@ export const {
     useUnlikeProjectMutation,
     useGetMyProjectsQuery,
     useGetProjectsQuery,
-    useLazyGetProjectsQuery
+    useLazyGetProjectsQuery,
+    useUpdateProjectMutation,
+    useUploadMediaMutation,
+    useUpdateProjectStatusMutation
 } = projectApi;
