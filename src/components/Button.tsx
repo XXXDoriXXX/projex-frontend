@@ -34,8 +34,26 @@ const variantStyles: Record<Variant, string> = {
   hover:shadow-[0_0_60px_rgba(124,58,237,0.2),0_0_120px_rgba(139,92,246,0.2),0_0_180px_rgba(109,40,217,0.2),0_12px_40px_rgba(0,0,0,0.4),0_2px_inset_rgba(255,255,255,0.4),0_-2px_inset_rgba(0,0,0,0.3)]
 `
     ,
-    secondary: "bg-gray-700 text-white hover:bg-gray-600 focus:ring-gray-400",
-    danger: "bg-red-500 text-white hover:bg-red-400 focus:ring-red-300 rounded-md",
+    secondary: `
+      px-6 py-2 rounded-full
+      bg-neutral-800/70 backdrop-blur-sm
+      border border-white/10
+      text-neutral-200
+      hover:bg-neutral-700/90 hover:text-white
+      focus:ring-white/20
+      hover:scale-105
+    `,
+    danger: `
+      px-6 py-2 rounded-full
+      bg-red-600/90 backdrop-blur-sm
+      border border-red-500/30
+      text-white
+      shadow-[0_0_15px_rgba(239,68,68,0.3)]
+      hover:bg-red-600
+      hover:shadow-[0_0_25px_rgba(239,68,68,0.5)]
+      focus:ring-red-400/50
+      hover:scale-105
+    `,
     ghost: "bg-transparent text-white hover:bg-white/10 focus:ring-white/20 border border-white/20 hover:scale-110    rounded-full",
     glass: `
         bg-white/10 backdrop-blur-md 

@@ -5,6 +5,7 @@ import type { RootState } from "../../../store.ts";
 import { motion } from "framer-motion";
 
 import {
+    type HackathonStatus,
     useGetHackathonByIdQuery,
     useJoinHackathonMutation,
     useLeaveHackathonMutation
@@ -21,6 +22,7 @@ import {TabParticipants} from "../components/tabs/TabParticipants.tsx";
 import {TabRating} from "../components/tabs/TabRating.tsx";
 import {TabMySubmission} from "../components/tabs/TabMySubmission.tsx";
 import {useState} from "react";
+import {HackathonStatusSwitcher} from "../components/hackathon/HackathonStatusSwitcher.tsx";
 
 export type HackathonTab = "overview" | "projects" | "participants" | "leaderboard" | "submission" | "rating";
 
@@ -112,6 +114,7 @@ export function HackathonPage() {
             <div className="absolute bottom-20 left-20 size-96 bg-cyan-500/10 rounded-full blur-3xl" />
 
             <div className="relative z-10 container mx-auto px-4 py-24">
+
                 <HackathonHeader
                     hackathon={hackathon}
                     isParticipant={isParticipant}

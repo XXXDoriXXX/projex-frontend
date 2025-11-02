@@ -4,8 +4,12 @@ import { format } from "date-fns";
 import { uk } from "date-fns/locale";
 import {Calendar, Users, Trophy, CheckCircle, Clock, Star} from "lucide-react";
 import { motion } from "framer-motion";
-import type {HackathonWithDetails} from "../../api/hackathonApi.ts";
+import type {HackathonStatus, HackathonWithDetails} from "../../api/hackathonApi.ts";
 import {useNavigate} from "react-router-dom";
+import {HackathonStatusSwitcher} from "./HackathonStatusSwitcher.tsx";
+import * as React from "react";
+import {renderMarkdown} from "../../../../shared/utils/utils.ts";
+import {MarkdownDisplay} from "../../../../components/MarkdownDisplay.tsx";
 
 interface HackathonHeaderProps {
     hackathon: HackathonWithDetails;
@@ -66,14 +70,34 @@ export function HackathonHeader({ hackathon, isParticipant, isAuthor, onJoin, on
                 {hackathon.title}
             </motion.h1>
 
-            <motion.p
-                className="text-lg text-muted-foreground max-w-3xl mb-6"
+            <motion.div
+                className="max-w-3xl mb-6"
                 variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
             >
-                {hackathon.description}
-            </motion.p>
+                <MarkdownDisplay
+                    text={hackathon.description}
+                    truncate={100}
+                    className="text-gray-300 max-w-none"
+                />
+            </motion.div>
+            {isAuthor && (
+                <div className="my-6 flex items-center justify-end gap-4">
+                    <Button
+                        onClick={handleNavigate(`/hackathon/edit/${hackathon.id}`)}
+                        variant="secondary"
+                        className="h-10"
+                    >
+                        Керувати хакатоном
+                    </Button>
+                    <HackathonStatusSwitcher
+                        hackathonId={hackathon.id!}
+                        currentStatus={hackathon.status as HackathonStatus}
+                    />
+                </div>
+            )}
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
                 <InfoCard
                     icon={Calendar}
                     title="Дата початку"
@@ -89,21 +113,12 @@ export function HackathonHeader({ hackathon, isParticipant, isAuthor, onJoin, on
                     title="Учасників"
                     value={hackathon.participants.length}
                 />
-                <InfoCard
-                    icon={Trophy}
-                    title="Призовий фонд"
-                    value="$10,000"
-                />
             </div>
 
-            {/* Кнопки Дій */}
             <motion.div
                 className="flex gap-4"
                 variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
             >
-                {isAuthor && (
-                    <Button onClick={handleNavigate(`/hackathon/edit/${hackathon.id}`)} variant="secondary">Керувати хакатоном</Button>
-                )}
 
                 {!isAuthor && isParticipant && (
                     <Button

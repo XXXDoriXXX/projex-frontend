@@ -3,6 +3,7 @@ import type {Project} from "../shared/types/Project.ts";
 import {Archive, Edit} from "lucide-react";
 import {Badge} from "./badge.tsx";
 import {useNavigate} from "react-router-dom";
+import {MarkdownDisplay} from "./MarkdownDisplay.tsx";
 
 const Tag = ({text}: { text: string }) => (
     <span className="bg-purple-500/20 text-purple-200 text-xs font-semibold px-3 py-1 rounded-full">
@@ -61,7 +62,7 @@ const ProjectCard = React.forwardRef<HTMLDivElement, ProjectCardProps>(
     return (
         <div
             ref={ref}
-            onClick={handleNavigate(`/project/view/${project.id}`)}
+            onClick={onClick || handleNavigate(`/project/view/${project.id}`)}
             className={`
                 relative rounded-2xl overflow-hidden shadow-lg
                 bg-gray-800/50 border border-white/10
@@ -70,7 +71,6 @@ const ProjectCard = React.forwardRef<HTMLDivElement, ProjectCardProps>(
                 ${className || ''} 
             `}
         >
-            {/* Прев'ю зображення */}
             <div className="relative" >
                 <img
                     src={project.previewUrl || 'https://cataas.com/cat/gif'}
@@ -111,15 +111,17 @@ const ProjectCard = React.forwardRef<HTMLDivElement, ProjectCardProps>(
                 </a>
             </div>
 
-            {/* Контент картки */}
             <div className="p-4">
 
                 <h3 className="text-xl font-bold text-purple-400 mb-2">{project.title}</h3>
                 <p className="text-sm text-gray-300 mb-4 line-clamp-2">
-                    {project.description}
+                    <MarkdownDisplay
+                        text={project.description}
+                        truncate={50}
+                        className="text-gray-300 max-w-none"
+                    />
                 </p>
 
-                {/* Статистика */}
                 <div className="flex items-center gap-4 text-gray-400 text-sm mb-4">
                     <span className="flex items-center gap-1">
                         <svg

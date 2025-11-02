@@ -63,6 +63,7 @@ export function HackathonTabs({ activeTab, onTabChange, isParticipant,canRate, h
                     My projects
                 </button>
             )}
+
         </div>
     );
 }

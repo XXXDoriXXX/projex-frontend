@@ -33,6 +33,7 @@ import {Separator} from "../../../components/separator.tsx";
 import {MotionEffect} from "../../../components/Animations/Motion/Motion-effect.tsx";
 import {useSelector} from "react-redux";
 import type {RootState} from "../../../store.ts";
+import {renderMarkdown} from "../../../shared/utils/utils.ts";
 
 
 interface ProjectViewPageProps {
@@ -90,12 +91,6 @@ export default function ProjectPage({ onNavigateBack }: ProjectViewPageProps) {
         }
     }, [id, addView]);
 
-    const renderDescription = (markdown: string) => {
-        return markdown
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            .replace(/\*(.*?)\*/g, '<em>$1</em>')
-            .replace(/\n/g, '<br>');
-    };
 
     const handleLike = () => {
         setApiError(null);
@@ -107,9 +102,9 @@ export default function ProjectPage({ onNavigateBack }: ProjectViewPageProps) {
         }
     };
     const handleEdit = () => {
-        // Тут ви можете відкрити модальне вікно або перейти на сторінку редагування
+       
         console.log("Відкрити вікно редагування для проекту:", id);
-        // наприклад: navigate(`/project/edit/${id}`);
+         navigate(`/project/edit/${id}`);
     };
     const handleNavigate = (path: string) => () => {
         navigate(path);
@@ -368,7 +363,7 @@ export default function ProjectPage({ onNavigateBack }: ProjectViewPageProps) {
                             <div
                                 className="text-gray-300 prose prose-invert max-w-none"
                                 dangerouslySetInnerHTML={{
-                                    __html: renderDescription(projectData.description),
+                                    __html: renderMarkdown(projectData.description),
                                 }}
                             />
                         </div>

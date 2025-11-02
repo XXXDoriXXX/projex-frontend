@@ -1,6 +1,8 @@
 
 import { Badge } from "../../../../components/badge.tsx";
 import type {HackathonWithDetails} from "../../api/hackathonApi.ts";
+import {MarkdownDisplay} from "../../../../components/MarkdownDisplay.tsx";
+import * as React from "react";
 
 export function TabOverview({ hackathon }: { hackathon: HackathonWithDetails }) {
     return (
@@ -8,14 +10,13 @@ export function TabOverview({ hackathon }: { hackathon: HackathonWithDetails }) 
             {/* Ліва колонка - Опис */}
             <div className="md:col-span-2 bg-card/50 backdrop-blur-2xl border border-border/50 rounded-2xl p-6">
                 <h3 className="text-2xl font-semibold mb-4">Деталі Хакатону</h3>
-                {/* Тут можна вставити рендер Markdown, якщо опис це підтримує */}
-                <div
-                    className="prose prose-invert text-muted-foreground"
-                    dangerouslySetInnerHTML={{ __html: hackathon.description.replace(/\n/g, '<br />') }} // Простий рендер
+                <MarkdownDisplay
+                    text={hackathon.description}
+                    truncate={0}
+                    className="text-gray-300 max-w-none"
                 />
             </div>
 
-            {/* Права колонка - Теми та Судді */}
             <div className="md:col-span-1 space-y-6">
                 <div className="bg-card/50 backdrop-blur-2xl border border-border/50 rounded-2xl p-6">
                     <h4 className="text-lg font-semibold mb-3">Теми</h4>

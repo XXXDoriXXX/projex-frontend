@@ -18,7 +18,7 @@ export interface CreateHackathonDto {
 }
 
 export type UpdateHackathonDto = Partial<CreateHackathonDto>;
-
+export type HackathonStatus = 'OPEN' | 'RATING' | 'CLOSED' | 'ARCHIVED';
 export interface SubmitProjectDto {
     projectId: string;
 }
@@ -331,6 +331,17 @@ export const hackathonApi = createApi({
                 { type: HACKATHON_MY_PROJECTS_TAG, id: hackathonId }
             ],
         }),
+        updateHackathonStatus: builder.mutation<void, { id: string, status: HackathonStatus }>({
+            query: ({ id, status }) => ({
+                url: `/${id}/status`,
+                method: 'PATCH',
+                body: { status },
+            }),
+            invalidatesTags: (result, error, { id }) => [
+                { type: HACKATHON_DETAILS_TAG, id },
+                HACKATHON_LIST_TAG
+            ],
+        }),
 
     }),
 });
@@ -350,5 +361,6 @@ export const {
     useGetLeaderboardQuery,
     useGetThemeCategoriesQuery,
     useGetRatingCategoriesQuery,
+    useUpdateHackathonStatusMutation,
     useGetMyHackathonProjectsQuery
 } = hackathonApi;
