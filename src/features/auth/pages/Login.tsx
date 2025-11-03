@@ -6,8 +6,8 @@ import Button from "../../../components/Button.tsx";
 import SocialButton from "../../../components/SocialButton.tsx";
 import { GoogleLogin } from '@react-oauth/google';
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
 import Loading from "../../../components/Loading.tsx";
+import { useNavigate } from "react-router-dom";
 import ErrorMessage from "../../../components/ErrorMessage.tsx";
 import { useDispatch } from "react-redux";
 import type { AppDispatch } from "../../../store.ts";
@@ -52,7 +52,6 @@ const Login = () => {
             <div className="absolute top-20 right-20 size-96 bg-primary/20 rounded-full blur-3xl" />
             <div className="absolute bottom-20 left-20 size-96 bg-cyan-500/10 rounded-full blur-3xl" />
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-96 bg-pink-500/10 rounded-full blur-3xl" />
-            <Button variant={"glass"} type={"submit"} className={"absolute top-6 left-6 z-50"}>Back to Home</Button>
             <DisplayForm onSubmit={handleSubmit} className={"relative justify-center "}>
                 <DisplayText variant="primary" className="mb-4">Hello!</DisplayText>
                 <DisplayText variant="secondary">We are really happy to see you aggain</DisplayText>

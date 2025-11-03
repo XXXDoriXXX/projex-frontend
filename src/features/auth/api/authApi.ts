@@ -18,7 +18,7 @@ export interface UserResponse {
 
 export const authApi = createApi({
     reducerPath: 'authApi',
-    baseQuery: fetchBaseQuery({ baseUrl: 'http://localhost:3000/api' }),
+    baseQuery: fetchBaseQuery({ baseUrl: import.meta.env.VITE_API_BASE_URL}),
     tagTypes: ['User'],
     endpoints: (builder) => ({
         login: builder.mutation<{ token: string }, LoginCredentials>({

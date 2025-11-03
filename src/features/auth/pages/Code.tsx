@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import DisplayText from "../../../components/DisplayText.tsx";
 import DisplayForm from "../../../components/DisplayForm.tsx";
@@ -5,6 +6,9 @@ import Button from "../../../components/Button.tsx";
 import OTPInput from "../../../components/OTPInput.tsx";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { setToken } from "../authSlice.ts";
+import type { AppDispatch } from "../../../store.ts";
 
 const RESEND_TIMEOUT = 60; // секунд
 
@@ -13,15 +17,12 @@ const Code = () => {
     const [resendTimer, setResendTimer] = useState(RESEND_TIMEOUT);
     const [isResending, setIsResending] = useState(false);
     const navigate = useNavigate();
-
-
+    const dispatch = useDispatch<AppDispatch>()
     useEffect(() => {
         if (resendTimer === 0) return;
-
         const timerId = setInterval(() => {
             setResendTimer((prev) => prev - 1);
         }, 1000);
-
         return () => clearInterval(timerId);
     }, [resendTimer]);
 
@@ -33,26 +34,28 @@ const Code = () => {
         }
         try {
             const token = localStorage.getItem("token");
-            console.log("Resending verification code with token:", token);
             if (!token) {
                 throw new Error("No token found");
             }
             await axios.post(`http://localhost:3000/api/auth/verify-email/${code}` ,{}, {headers: {
                     Authorization: `Bearer ${token}`,
                 },}, );
+
+            dispatch(setToken(token));
+            localStorage.removeItem("token");
             navigate("/");
+
         } catch (err) {
             console.error("Verification Error:", err);
+            // TODO: Додати компонент ErrorMessage, як в Login.tsx
         }
     };
 
     const handleResend = async () => {
         if (resendTimer > 0) return;
-
         setIsResending(true);
         try {
             const token = localStorage.getItem("token");
-            console.log("Resending verification code with token:", token);
             if (!token) {
                 throw new Error("No token found");
             }
@@ -69,8 +72,13 @@ const Code = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 md:p-8 xl:p-32 bg-[url(./assets/img/bg1.jpg)] bg-cover bg-center">
-            <DisplayForm onSubmit={handleSubmit}>
+        <div className="min-h-screen min-w-screen bg-background text-foreground relative overflow-hidden items-center justify-center flex flex-col p-4">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-cyan-500/10" />
+            <div className="absolute top-20 right-20 size-96 bg-primary/20 rounded-full blur-3xl" />
+            <div className="absolute bottom-20 left-20 size-96 bg-cyan-500/10 rounded-full blur-3xl" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-96 bg-pink-500/10 rounded-full blur-3xl" />
+
+            <DisplayForm onSubmit={handleSubmit} className={"relative justify-center "}>
                 <DisplayText variant="primary" className="mb-4">
                     Email verification
                 </DisplayText>
@@ -80,18 +88,22 @@ const Code = () => {
 
                 <OTPInput value={code} onChange={setCode} />
 
+                {/* TODO: Додати сюди <Loading /> та <ErrorMessage /> як в Login.tsx */}
+
                 <Button variant="primary" type="submit" className="w-full mt-4">
                     Confirm
                 </Button>
 
-                <div className="mt-4 text-center text-sm text-gray-500">
+                <div className="mt-4 text-center text-sm text-muted-foreground">
                     Didn't receive the code?{" "}
                     <button
                         type="button"
                         onClick={handleResend}
                         disabled={resendTimer > 0 || isResending}
-                        className={`underline font-semibold ${
-                            resendTimer > 0 || isResending ? "cursor-not-allowed opacity-50" : "cursor-pointer"
+                        className={`underline font-semibold transition-colors ${
+                            resendTimer > 0 || isResending
+                                ? "cursor-not-allowed text-muted-foreground opacity-50"
+                                : "cursor-pointer text-primary/80 hover:text-primary"
                         }`}
                     >
                         {resendTimer > 0 ? `Resend code in ${resendTimer}s` : isResending ? "Resending..." : "Resend code"}
