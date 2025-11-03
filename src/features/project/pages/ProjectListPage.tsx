@@ -15,7 +15,7 @@ import ProjectCard from "../../../components/ProjectCard.tsx";
 import {useLazyLookupUserByEmailQuery} from "../../profile/api/userApi.ts";
 import {Label} from "../../../components/label.tsx";
 import {Badge} from "../../../components/badge.tsx";
-
+import { useSearchParams } from 'react-router-dom';
 function useDebounce<T>(value: T, delay: number): T {
     const [debouncedValue, setDebouncedValue] = useState<T>(value);
     useEffect(() => {
@@ -30,7 +30,8 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 export function ProjectListPage() {
-    const [search, setSearch] = useState('');
+    const [searchParams, setSearchParams] = useSearchParams();
+    const [search, setSearch] = useState(searchParams.get('search') || '');
     const [authorEmail, setAuthorEmail] = useState('');
     const [cursor, setCursor] = useState<string | undefined>(undefined);
 
@@ -50,6 +51,14 @@ export function ProjectListPage() {
         setCursor(undefined);
     }, [debouncedSearch, authorId, technologyIds]);
 
+    useEffect(() => {
+        const newSearchParams = new URLSearchParams();
+        if (debouncedSearch) {
+            newSearchParams.set('search', debouncedSearch);
+        }
+
+        setSearchParams(newSearchParams, { replace: true });
+    }, [debouncedSearch, setSearchParams]);
     useEffect(() => {
         if (debouncedAuthorEmail && debouncedAuthorEmail.includes('@')) {
             triggerLookup(debouncedAuthorEmail);
@@ -182,12 +191,11 @@ export function ProjectListPage() {
 
                 <motion.div
                     className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10 p-4 bg-card/50 backdrop-blur-2xl border border-border/50 rounded-2xl shadow-xl
-                               sticky top-4 z-20 drop-shadow-[0_0_50px_#411578FF]"
+               sticky top-22 z-20 drop-shadow-[0_0_50px_#411578FF]"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
                 >
-                    {/* Пошук за назвою */}
                     <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-muted-foreground" />
                         <Input

@@ -1,3 +1,4 @@
+
 import { createBrowserRouter } from "react-router-dom";
 import Home from "../features/home/pages/Home.tsx";
 import Login from "../features/auth/pages/Login.tsx";
@@ -8,7 +9,7 @@ import AuthLayout from "../AuthLayout.tsx";
 import CreateProject from "../features/project/pages/CreateProject.tsx";
 import Code from "../features/auth/pages/Code.tsx";
 import Profile from "../features/profile/pages/Profile.tsx";
-import ProjectLayout from "../ProjectLayout.tsx";
+
 import ProjectView from "../features/project/pages/ProjectView.tsx";
 import {EditProjectPage} from "../features/project/pages/EditProjectPage.tsx";
 import CreateHackathonPage from "../features/hackathons/pages/CreateHackathonPage.tsx";
@@ -19,33 +20,22 @@ import ProjectListPage from "../features/project/pages/ProjectListPage.tsx";
 
 export const router = createBrowserRouter([
     {
+        // Всі маршрути "всередині" програми тепер використовують AppLayout
         path: "/",
         element: <AppLayout />,
         children: [
             { path: "/", element: <Home /> },
-            {path: "/profile/:username", element: <Profile/>},
+            { path: "/profile/:username", element: <Profile /> },
 
-        ],
-    },
-    {
-        path: "/project",
-        element: <ProjectLayout />,
-        children: [
-            { path: "create", element: <CreateProject/> },
-            { path: "view/:id", element: <ProjectView />},
-            { path: "edit/:projectId", element: <EditProjectPage />},
-            { path: "explore", element: <ProjectListPage />},
+            { path: "/project/create", element: <CreateProject /> },
+            { path: "/project/view/:id", element: <ProjectView /> },
+            { path: "/project/edit/:projectId", element: <EditProjectPage /> },
+            { path: "/project/explore", element: <ProjectListPage /> },
 
-        ],
-    },
-    {
-        path: "/hackathon",
-        element: <ProjectLayout />,
-        children: [
-            { path: "create", element: <CreateHackathonPage/> },
-            { path: "view/:id", element: <HackathonPage />},
-            { path: "edit/:id", element: <EditHackathonPage />},
-            { path: "explore", element: <HackathonListPage />},
+            { path: "/hackathon/create", element: <CreateHackathonPage /> },
+            { path: "/hackathon/view/:id", element: <HackathonPage /> },
+            { path: "/hackathon/edit/:id", element: <EditHackathonPage /> },
+            { path: "/hackathon/explore", element: <HackathonListPage /> },
         ],
     },
     {
@@ -54,7 +44,7 @@ export const router = createBrowserRouter([
         children: [
             { path: "login", element: <Login /> },
             { path: "register", element: <Register /> },
-            {path: "code",element: <Code />},
+            { path: "code", element: <Code /> },
             { path: "github", element: <GithubCallback /> },
         ]
     },

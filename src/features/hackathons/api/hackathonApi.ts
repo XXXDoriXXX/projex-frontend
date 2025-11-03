@@ -37,6 +37,7 @@ export interface SimpleHackathon {
     endDate: string;
     status: string;
     authorId: string;
+    author: User;
 }
 export interface HackathonListResponse {
     success: boolean;

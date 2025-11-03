@@ -7,7 +7,7 @@ import ErrorMessage from '../../../components/ErrorMessage.tsx';
 import { Input } from '../../../components/input.tsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/Select.tsx';
 import {ArrowUp, Search } from 'lucide-react';
-
+import { useSearchParams } from 'react-router-dom';
 import { useGetHackathonsQuery, type HackathonListParams } from '../api/hackathonApi.ts';
 import HackathonCard from "../components/hackathon/HackathonCard.tsx";
 
@@ -25,12 +25,23 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 export function HackathonListPage() {
-    const [search, setSearch] = useState('');
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    const [search, setSearch] = useState(searchParams.get('search') || '');
     const [status, setStatus] = useState<'ALL' | 'OPEN' | 'RATING' | 'CLOSED' | 'ARCHIVED'>('ALL');
     const debouncedSearch = useDebounce(search, 300);
 
     const [cursor, setCursor] = useState<string | undefined>(undefined);
-
+    useEffect(() => {
+        const newSearchParams = new URLSearchParams();
+        if (debouncedSearch) {
+            newSearchParams.set('search', debouncedSearch);
+        }
+        if (status !== 'ALL') {
+            newSearchParams.set('status', status);
+        }
+        setSearchParams(newSearchParams, { replace: true });
+    }, [debouncedSearch, status, setSearchParams]);
     useEffect(() => {
         setCursor(undefined);
     }, [debouncedSearch, status]);
@@ -145,7 +156,7 @@ export function HackathonListPage() {
 
                 <motion.div
                     className="flex flex-col md:flex-row gap-4 mb-10 p-4 bg-card/50 backdrop-blur-2xl border border-border/50 rounded-2xl shadow-xl
-                               sticky top-4 z-20 drop-shadow-[0_0_50px_#411578FF]"
+                               sticky top-22 z-20 drop-shadow-[0_0_50px_#411578FF]"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}

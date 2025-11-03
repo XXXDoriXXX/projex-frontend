@@ -61,7 +61,7 @@ const HackathonCard: React.FC<HackathonCardProps> = ({ hackathon }) => {
                         {hackathon.title}
                     </h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                        Автор: <span className="font-medium text-foreground/80">{hackathon.authorId}</span>
+                        Автор: <span className="font-medium text-foreground/80">{hackathon.author.username}</span>
                     </p>
 
                     <div className="mt-auto space-y-2 pt-4 border-t border-border/50">
