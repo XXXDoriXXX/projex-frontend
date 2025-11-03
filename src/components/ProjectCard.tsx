@@ -49,6 +49,7 @@ interface ProjectCardProps {
 
 const ProjectCard = React.forwardRef<HTMLDivElement, ProjectCardProps>(
     ({project, onClick, className}, ref) => {
+        console.log("Rendering ProjectCard for project:", project);
     const tags = project.technologies || [];
         const navigate = useNavigate();
         const handleNavigate = (path: string) => () => {
@@ -114,13 +115,11 @@ const ProjectCard = React.forwardRef<HTMLDivElement, ProjectCardProps>(
             <div className="p-4">
 
                 <h3 className="text-xl font-bold text-purple-400 mb-2">{project.title}</h3>
-                <p className="text-sm text-gray-300 mb-4 line-clamp-2">
                     <MarkdownDisplay
                         text={project.description}
                         truncate={50}
                         className="text-gray-300 max-w-none"
                     />
-                </p>
 
                 <div className="flex items-center gap-4 text-gray-400 text-sm mb-4">
                     <span className="flex items-center gap-1">
@@ -152,8 +151,6 @@ const ProjectCard = React.forwardRef<HTMLDivElement, ProjectCardProps>(
                         {project.viewsCount}
                     </span>
                 </div>
-
-                {/* Теги */}
                 <div className="flex flex-wrap gap-2">
                     {tags.map((tag) => (
                         <Tag key={tag.id} text={tag.name}/>
