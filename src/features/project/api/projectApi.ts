@@ -76,7 +76,7 @@ const PROJECT_LIST_TAG = 'ProjectList';
 export const projectApi = createApi({
     reducerPath: 'projectApi',
     baseQuery: fetchBaseQuery({
-        baseUrl: 'http://localhost:3000/api',
+        baseUrl: import.meta.env.VITE_API_BASE_URL,
         prepareHeaders: (headers, { getState }) => {
             const token = (getState() as any).auth.token;
             if (token) {

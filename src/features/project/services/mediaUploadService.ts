@@ -23,7 +23,7 @@ export const uploadMediaToServer = async (
 
     try {
         const response = await axios.post<MediaUploadResult>(
-            'http://localhost:3000/api/project/media/upload',
+            import.meta.env.VITE_API_BASE_URL+'project/media/upload',
             formData,
             {
                 headers: {

@@ -193,7 +193,7 @@ const HACKATHON_PROJECT_RATING_TAG = 'ProjectRatings'
 export const hackathonApi = createApi({
     reducerPath: 'hackathonApi',
     baseQuery: fetchBaseQuery({
-        baseUrl: 'http://localhost:3000/api/hackathon',
+        baseUrl: import.meta.env.VITE_API_BASE_URL + 'hackathon',
         prepareHeaders: (headers, { getState }) => {
             const token = (getState() as any).auth.token;
             if (token) {

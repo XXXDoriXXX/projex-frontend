@@ -5,8 +5,9 @@ import Button from '../../../../components/Button';
 import { Progress } from '../../../../components/Progress';
 import { Badge } from '../../../../components/badge';
 import { ImageIcon, Star, Upload, Video, X } from 'lucide-react';
-import type { RootState } from '../../../../store'; // Припускаю, що тут ваш RootState
-import { uploadMediaToServer } from '../../services/mediaUploadService'; // <-- Новий імпорт сервісу
+import type { RootState } from '../../../../store';
+import { uploadMediaToServer } from '../../services/mediaUploadService';
+import Loading from '../../../../components/Loading'; // <-- 1. ДОДАЙТЕ ЦЕЙ ІМПОРТ
 
 export const SectionMedia = () => {
     const { mediaFiles, setMediaFiles } = useEditProject();
@@ -15,6 +16,7 @@ export const SectionMedia = () => {
     const imageInputRef = useRef<HTMLInputElement>(null);
     const videoInputRef = useRef<HTMLInputElement>(null);
 
+    // ... (Функції updateProgress, handleFileChange, handleSetMainImage, handleRemoveMedia - БЕЗ ЗМІН) ...
     const updateProgress = (fileId: string, progress: number) => {
         setMediaFiles(prev => prev.map(f => f.id === fileId ? { ...f, uploadProgress: progress, uploadError: false } : f));
     };
@@ -40,9 +42,6 @@ export const SectionMedia = () => {
                 if (!token) {
                     throw new Error("Користувач не автентифікований");
                 }
-
-                // --- Логіка завантаження оновлена ---
-                // 'updateProgress' тепер буде викликатися з реальним прогресом з axios
                 const response = await uploadMediaToServer(
                     file,
                     token,
@@ -50,16 +49,14 @@ export const SectionMedia = () => {
                         updateProgress(tempId, progress);
                     }
                 );
-                // ------------------------------------
-
                 setMediaFiles(prev => prev.map(f =>
                     f.id === tempId ? {
                         ...f,
-                        id: response.id,        // Cервіс повертає дані напряму
+                        id: response.id,
                         serverId: response.id,
                         url: response.url,
                         isUploading: false,
-                        uploadProgress: 100,    // 'onProgress' в axios гарантує 100%
+                        uploadProgress: 100,
                     } : f
                 ));
             } catch (err) {
@@ -86,7 +83,7 @@ export const SectionMedia = () => {
 
     return (
         <div className="pt-4 space-y-6">
-            {/* ... (Верстка кнопок без змін) ... */}
+            {/* ... (Кнопки завантаження - БЕЗ ЗМІН) ... */}
             <div className="flex gap-3">
                 <Button type="button" variant="ghost" onClick={() => imageInputRef.current?.click()} className="flex-1 rounded-2xl bg-secondary/50 border-border/50 hover:bg-secondary/70 hover:border-primary/50 gap-2 h-12">
                     <Upload className="size-4" /> Завантажити фото
@@ -98,28 +95,47 @@ export const SectionMedia = () => {
                 <input ref={videoInputRef} id="file-video" type="file" accept="video/*" multiple className="hidden" onChange={(e) => handleFileChange(e, 'video')} />
             </div>
 
-            {/* ... (Верстка списку медіа без змін) ... */}
+            {/* --- 2. ОНОВІТЬ ЦЕЙ БЛОК ВЕРСТКИ --- */}
             {mediaFiles.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {mediaFiles.map((file) => (
                         <div key={file.id} className={`relative group rounded-2xl overflow-hidden border-2 transition-all ${file.isMain ? 'border-primary shadow-lg shadow-primary/30' : 'border-border/50'} ${file.uploadError ? 'border-destructive' : 'bg-secondary/50'}`}>
+
+                            {/* Медіа (img/video) */}
                             <div className="aspect-video">
                                 {file.type === 'image' ? <img src={file.url} alt={file.name} className="w-full h-full object-cover" /> : <video src={file.url} title={file.name} className="w-full h-full object-cover bg-black" controls muted playsInline />}
                             </div>
-                            {file.isUploading && file.uploadProgress < 100 && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-black/80">
-                                    <div className="p-4 w-4/5">
-                                        <p className="text-xs text-white mb-1">Завантаження... {Math.round(file.uploadProgress)}%</p>
-                                        <Progress value={file.uploadProgress} className="h-1 bg-white/20" />
-                                    </div>
-                                </div>
-                            )}
+
+                            {/* --- ОНОВЛЕНА ЛОГІКА ОВЕРЛЕЇВ --- */}
+
+                            {/* Помилка (має вищий пріоритет) */}
                             {file.uploadError && (
                                 <div className="absolute inset-0 flex items-center justify-center bg-destructive/80 p-2">
                                     <p className="text-xs text-white text-center">Помилка завантаження.</p>
                                 </div>
                             )}
-                            {file.uploadProgress === 100 && !file.isUploading && (
+
+                            {/* Завантаження (включає прогрес + обробку) */}
+                            {file.isUploading && !file.uploadError && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+                                    {file.uploadProgress < 100 ? (
+                                        // 1. Показуємо прогрес-бар (0-99%)
+                                        <div className="p-4 w-4/5">
+                                            <p className="text-xs text-white mb-1">Завантаження... {Math.round(file.uploadProgress)}%</p>
+                                            <Progress value={file.uploadProgress} className="h-1 bg-white/20" />
+                                        </div>
+                                    ) : (
+                                        // 2. 100% завантажено, чекаємо на відповідь сервера
+                                        <div className="p-4 w-4/5 text-center">
+                                            <Loading />
+                                            <p className="text-xs text-white mt-2">Обробка...</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Кнопки (тільки при успішному завершенні) */}
+                            {!file.isUploading && !file.uploadError && (
                                 <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                                     {!file.isMain && file.type === 'image' && (
                                         <Button type="button" onClick={() => handleSetMainImage(file.id)} className="rounded-xl bg-primary/90 hover:bg-primary gap-1">
@@ -131,7 +147,9 @@ export const SectionMedia = () => {
                                     </Button>
                                 </div>
                             )}
+                            {/* ------------------------------------- */}
 
+                            {/* Бедж "Головне" */}
                             {file.isMain && (
                                 <div className="absolute top-2 right-2">
                                     <Badge className="bg-primary/90 backdrop-blur-sm gap-1">
