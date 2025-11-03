@@ -35,7 +35,7 @@ export function HackathonTabs({ activeTab, onTabChange, isParticipant,canRate, h
                     {tab.label}
                 </button>
             ))}
-            {canRate && (hackathonStatus === 'RATING' || hackathonStatus === 'CLOSED') && (
+            {canRate && (hackathonStatus === 'RATING') && (
                 <button
                     onClick={() => onTabChange("rating")}
                     className={cn(

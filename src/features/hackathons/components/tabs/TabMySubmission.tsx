@@ -4,7 +4,8 @@ import {
     useGetMyHackathonProjectsQuery,
     useRemoveProjectMutation,
     useSubmitProjectMutation,
-    useGetLeaderboardQuery
+    useGetLeaderboardQuery,
+    useGetProjectRatingsQuery
 } from "../../api/hackathonApi.ts";
 import { useGetMyProjectsQuery } from "../../../project/api/projectApi.ts";
 
@@ -26,6 +27,9 @@ import {
     CartesianGrid
 } from 'recharts';
 import {UploadCloud} from "lucide-react";
+import {Avatar, AvatarFallback, AvatarImage} from "../../../../components/avatar.tsx";
+import {Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle} from "../../../../components/Sheet.tsx";
+import CustomTooltip from "../../../../components/CustomTooltip.tsx";
 
 const listVariants = {
     hidden: { opacity: 0 },
@@ -45,10 +49,55 @@ interface TabMySubmissionProps {
     hackathonId: string;
     hackathonStatus: string;
 }
+type ProjectRating = NonNullable<ReturnType<typeof useGetProjectRatingsQuery>['data']>[0];
 
+function RatingCard({ rating }: { rating: ProjectRating }) {
+
+    const getRaterTypeLabel = (type: ProjectRating['raterType']) => {
+        switch (type) {
+            case 'JUDGE': return 'Суддя';
+            case 'PARTICIPANT': return 'Учасник';
+            case 'PUBLIC': return 'Глядач';
+            default: return 'Гість';
+        }
+    };
+
+    return (
+        <div className="bg-secondary/50 border border-border/50 rounded-xl p-4">
+            <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-3">
+                    <Avatar className="size-10 border">
+                        <AvatarImage src={rating.rater.avatarUrl || undefined} alt={rating.rater.username} />
+                        <AvatarFallback>{rating.rater.username.substring(0, 2).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                        <p className="font-semibold text-foreground">{rating.rater.username}</p>
+                        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                            {getRaterTypeLabel(rating.raterType)}
+                        </span>
+                    </div>
+                </div>
+                <div className="flex flex-col items-end flex-shrink-0">
+                    <span className="text-3xl font-bold text-primary">
+                        {rating.rating.toFixed(1)}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                        {new Date(rating.createdAt).toLocaleDateString()}
+                    </span>
+                </div>
+            </div>
+
+            {rating.comment && (
+                <p className="text-sm text-foreground/90 mt-3 border-t border-border/50 pt-3">
+                    {rating.comment}
+                </p>
+            )}
+        </div>
+    );
+}
 export function TabMySubmission({ hackathonId, hackathonStatus }: TabMySubmissionProps) {
     const currentUserId = useSelector((state: RootState) => state.auth.user?.id);
-
+    const [selectedHpIdForRatings, setSelectedHpIdForRatings] = useState<string | null>(null);
     const {
         data: submittedProjectsData,
         isLoading: isLoadingSubmitted,
@@ -183,6 +232,65 @@ export function TabMySubmission({ hackathonId, hackathonStatus }: TabMySubmissio
         }
     };
 
+    type ProjectRatingsContentProps = {
+        hpId: string | null;
+    };
+
+    function ProjectRatingsContent({ hpId }: ProjectRatingsContentProps) {
+        const {
+            data: ratingsData,
+            isLoading,
+            isError,
+        } = useGetProjectRatingsQuery(hpId!, {
+            skip: !hpId,
+        });
+
+        const ratings = Array.isArray(ratingsData) ? ratingsData : [];
+
+        if (isLoading) {
+            return <Loading text="Завантаження відгуків..." />;
+        }
+        if (isError) {
+            return <ErrorMessage title="Помилка" message="Не вдалося завантажити відгуки." />;
+        }
+        if (ratings.length === 0) {
+            return (
+                <div className="text-center py-10">
+                    <p className="text-muted-foreground">Для цього проекту ще немає відгуків.</p>
+                </div>
+            );
+        }
+
+        const groupedRatings = ratings.reduce((acc, rating) => {
+            const categoryName = rating.category.name || 'Загальне';
+            if (!acc[categoryName]) {
+                acc[categoryName] = [];
+            }
+            acc[categoryName].push(rating);
+            return acc;
+        }, {} as Record<string, typeof ratings>);
+
+
+        return (
+            <div className="flex flex-col gap-8">
+                {Object.entries(groupedRatings).map(([categoryName, categoryRatings]) => (
+                    <div key={categoryName}>
+                        <h4 className="text-lg font-semibold text-primary mb-3 sticky top-0 bg-card py-2 border-b border-border z-10">
+                            {categoryName}
+                            <span className="text-sm font-normal text-muted-foreground ml-2">
+                            ({categoryRatings.length} відг.)
+                        </span>
+                        </h4>
+                        <div className="flex flex-col gap-4">
+                            {categoryRatings.map((rating) => (
+                                <RatingCard key={rating.id} rating={rating} />
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+    }
     if (isLoadingSubmitted || isLoadingAllProjects || (hackathonStatus !== 'OPEN' && isLoadingLeaderboard)) {
         return <Loading text="Завантаження ваших проектів..."/>;
     }
@@ -309,40 +417,61 @@ export function TabMySubmission({ hackathonId, hackathonStatus }: TabMySubmissio
                                                     data={chartData}
                                                     margin={{
                                                         top: 5,
-                                                        right: 10,
-                                                        left: 0,
+                                                        right: 0,
+                                                        left: -10,
                                                         bottom: 5,
                                                     }}
                                                 >
-                                                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)" />
+                                                    <CartesianGrid
+                                                        strokeDasharray="3 3"
+                                                        stroke="hsl(var(--border) / 0.5)"
+                                                        vertical={false}
+                                                    />
+
                                                     <XAxis
                                                         dataKey="criterion"
-                                                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                                                        stroke="hsl(var(--border) / 0.5)"
+                                                        axisLine={false}
+                                                        tickLine={false}
+                                                        tick={{ fill: '#A1A1A1FF', fontSize: 12 }}
                                                     />
+
+
                                                     <YAxis
                                                         domain={[0, 10]}
-                                                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                                                        axisLine={false}
+                                                        tickLine={false}
+                                                        tick={{ fill: '#A1A1A1FF', fontSize: 12 }}
                                                         stroke="hsl(var(--border) / 0.5)"
                                                     />
+
+
                                                     <Tooltip
-                                                        contentStyle={{
-                                                            backgroundColor: 'hsl(var(--card))',
-                                                            borderColor: 'hsl(var(--border))',
-                                                            borderRadius: '0.5rem'
-                                                        }}
-                                                        cursor={{ fill: 'hsl(var(--secondary))' }}
+                                                        content={<CustomTooltip />}
+                                                        cursor={{ fill: '#0d1319', radius:16, strokeWidth: 2, opacity: 0.5 }}
                                                     />
-                                                    <Legend wrapperStyle={{ paddingTop: '20px' }} />
+
+                                                    <Legend
+                                                        wrapperStyle={{ paddingTop: '20px' }}
+                                                        iconSize={14}
+                                                        formatter={(value) => (
+                                                            <span style={{ color: 'hsl(var(--muted-foreground))' }}>{value}</span>
+                                                        )}
+                                                    />
                                                     <Bar name="Судді" dataKey="JUDGE" fill="#FFBB28" radius={[4, 4, 0, 0]} />
                                                     <Bar name="Учасники" dataKey="PARTICIPANT" fill="#0088FE" radius={[4, 4, 0, 0]} />
                                                     <Bar name="Глядачі" dataKey="PUBLIC" fill="#00C49F" radius={[4, 4, 0, 0]} />
+
                                                 </BarChart>
                                             </ResponsiveContainer>
                                         </div>
                                     )}
 
-                                    <ProjectCard project={submission}/>
+                                    <div
+                                        className="cursor-pointer transition-transform hover:scale-[1.02]"
+                                        onClick={() => setSelectedHpIdForRatings(submission.hpId)}
+                                    >
+                                        <ProjectCard project={submission} onClick={()=>{}}/>
+                                    </div>
                                     <Button
                                         variant="danger"
                                         onClick={() => handleRemove(submission.hpId)}
@@ -362,6 +491,26 @@ export function TabMySubmission({ hackathonId, hackathonStatus }: TabMySubmissio
                     </motion.div>
                 )}
             </div>
+            <Sheet
+                open={!!selectedHpIdForRatings}
+                onOpenChange={(isOpen) => {
+                    if (!isOpen) {
+                        setSelectedHpIdForRatings(null);
+                    }
+                }}
+            >
+                <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+                    <SheetHeader className="mb-4">
+                        <SheetTitle>Відгуки по проекту</SheetTitle>
+                        <SheetDescription>
+                            Детальна інформація про оцінки та коментарі від суддів,
+                            учасників та глядачів.
+                        </SheetDescription>
+                    </SheetHeader>
+
+                    <ProjectRatingsContent hpId={selectedHpIdForRatings} />
+                </SheetContent>
+            </Sheet>
         </div>
     );
 }

@@ -164,12 +164,31 @@ export interface MyRatingsResponse {
     data: MyRating[];
     message?: string;
 }
+export type ProjectRating = {
+    id: string;
+    raterType: 'JUDGE' | 'PARTICIPANT' | 'PUBLIC';
+    rating: number;
+    comment: string | null;
+    createdAt: string;
+    category: {
+        id: string;
+        name: string;
+        order: number;
+    };
+    rater: {
+        id: string;
+        username: string;
+        avatarUrl: string | null;
+    };
+};
 const HACKATHON_LIST_TAG = 'HackathonList';
 const HACKATHON_DETAILS_TAG = 'HackathonDetails';
 const HACKATHON_LEADERBOARD_TAG = 'HackathonLeaderboard';
 const HACKATHON_CATEGORIES_TAG = 'HackathonCategories';
 const HACKATHON_MY_PROJECTS_TAG = 'HackathonMyProjects';
 const HACKATHON_MY_RATINGS_TAG = 'HackathonMyRatings';
+const HACKATHON_PROJECT_RATING_TAG = 'ProjectRatings'
+
 export const hackathonApi = createApi({
     reducerPath: 'hackathonApi',
     baseQuery: fetchBaseQuery({
@@ -190,7 +209,8 @@ export const hackathonApi = createApi({
         HACKATHON_CATEGORIES_TAG,
         HACKATHON_MY_PROJECTS_TAG,
         USER_PROJECTS_TAG,
-        HACKATHON_MY_RATINGS_TAG
+        HACKATHON_MY_RATINGS_TAG,
+        HACKATHON_PROJECT_RATING_TAG
     ],
 
     endpoints: (builder) => ({
@@ -389,6 +409,15 @@ export const hackathonApi = createApi({
                 { type: HACKATHON_MY_RATINGS_TAG, id: hackathonId }
             ],
         }),
+        getProjectRatings: builder.query<ProjectRating[], string>({
+            query: (hpId) => `/project/${hpId}/ratings`,
+            transformResponse: (response: { success: boolean, data: ProjectRating[] }) => {
+                return response.data;
+            },
+            providesTags: (result, error, hackathonId) => [
+                { type: HACKATHON_PROJECT_RATING_TAG, id: hackathonId }]
+            ,
+        }),
     }),
 });
 
@@ -409,5 +438,6 @@ export const {
     useGetRatingCategoriesQuery,
     useUpdateHackathonStatusMutation,
     useGetMyHackathonProjectsQuery,
+    useGetProjectRatingsQuery,
     useGetMyRatedProjectsQuery
 } = hackathonApi;
