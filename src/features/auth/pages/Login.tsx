@@ -59,7 +59,7 @@ const Login = () => {
                     <GoogleLogin
                         onSuccess={async (credentialResponse) => {
                             try {
-                                const res = await axios.post('http://localhost:3000/api/auth/google', {
+                                const res = await axios.post(import.meta.env.VITE_API_BASE_URL+'/auth/google', {
                                     idToken: credentialResponse.credential,
                                 });
                                 const { token } = res.data;
@@ -77,7 +77,7 @@ const Login = () => {
                     provider="github"
                     className="mt-4"
                     onClick={() =>
-                        window.location.href = `https://github.com/login/oauth/authorize?client_id=Ov23liJuqLlwYgqwEX9W&scope=user:email&redirect_uri=http://localhost:5173/auth/github`
+                        window.location.href = `https://github.com/login/oauth/authorize?client_id=Ov23liJuqLlwYgqwEX9W&scope=user:email&redirect_uri=https://projex-frontend-hazel.vercel.app/auth/github`
                     }
                 />
                 <DisplayText variant="secondary" className="relative flex py-5 items-center">
@@ -103,8 +103,8 @@ const Login = () => {
                     required
                     className="mb-6 mt-2"
                 />
-                {isLoading && <Loading message="Logging in..." />}
-                {isError && <ErrorMessage error={error} defaultMessage="Invalid credentials" />}
+                {isLoading && <Loading text="Logging in..." />}
+                {isError && <ErrorMessage message={error} defaultMessage="Invalid credentials" />}
 
                 <Button variant={"primary"} type={"submit"} className={"w-full mt-8"}>Login</Button>
 
