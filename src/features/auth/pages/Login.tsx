@@ -59,7 +59,7 @@ const Login = () => {
                     <GoogleLogin
                         onSuccess={async (credentialResponse) => {
                             try {
-                                const res = await axios.post(import.meta.env.VITE_API_BASE_URL+'/auth/google', {
+                                const res = await axios.post(import.meta.env.VITE_API_BASE_URL+'auth/google', {
                                     idToken: credentialResponse.credential,
                                 });
                                 const { token } = res.data;
