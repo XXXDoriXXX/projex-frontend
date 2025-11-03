@@ -34,6 +34,7 @@ import {MotionEffect} from "../../../components/Animations/Motion/Motion-effect.
 import {useSelector} from "react-redux";
 import type {RootState} from "../../../store.ts";
 import {renderMarkdown} from "../../../shared/utils/utils.ts";
+import {MarkdownDisplay} from "../../../components/MarkdownDisplay.tsx";
 
 
 interface ProjectViewPageProps {
@@ -357,18 +358,15 @@ export default function ProjectPage({ onNavigateBack }: ProjectViewPageProps) {
                             </div>
                         )}
 
-                        {/* Description */}
                         <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6 shadow-2xl">
                             <h2 className="text-2xl text-white mb-4">About this project</h2>
-                            <div
-                                className="text-gray-300 prose prose-invert max-w-none"
-                                dangerouslySetInnerHTML={{
-                                    __html: renderMarkdown(projectData.description),
-                                }}
+                            <MarkdownDisplay
+                                text={projectData.description}
+                                truncate={0}
+                                className="text-gray-300 max-w-none"
                             />
                         </div>
 
-                        {/* Technologies */}
                         {projectData.technologies.length > 0 && (
                             <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6 shadow-2xl">
                                 <div className="flex items-center gap-2 mb-4">

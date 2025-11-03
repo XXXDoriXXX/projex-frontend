@@ -18,6 +18,7 @@ export interface CreateHackathonDto {
 }
 
 export type UpdateHackathonDto = Partial<CreateHackathonDto>;
+export type VoterType = 'JUDGE' | 'PARTICIPANT' | 'PUBLIC';
 export type HackathonStatus = 'OPEN' | 'RATING' | 'CLOSED' | 'ARCHIVED';
 export interface SubmitProjectDto {
     projectId: string;
@@ -111,7 +112,7 @@ export interface LeaderboardEntry {
 }
 export interface LeaderboardResponse {
     success: boolean;
-    data: LeaderboardEntry[];
+    data: DetailedLeaderboardEntry[];
     message: string;
 }
 export interface MyProjectsResponse {
@@ -127,12 +128,48 @@ export interface HackathonProjectWithDetails {
     projectId: string;
     project: HackathonProject;
 }
+export interface ScoreByVoterType {
+    type: VoterType;
+    averageScore: number;
+    voteCount: number;
+}
+
+export interface CategoryScoreDetail {
+    categoryId: string;
+    categoryName: string;
+    averageScore: number;
+    scoresByVoterType: ScoreByVoterType[];
+}
+export interface DetailedLeaderboardEntry {
+    projectId: string;
+    projectTitle: string;
+    totalScore: number;
+    categoryScores: CategoryScoreDetail[];
+}
+export interface MyRating {
+    ratingId: string;
+    hackathonProjectId: string;
+    projectId: string;
+    projectTitle: string;
+    categoryId: string;
+    categoryName: string;
+    rating: number;
+    comment?: string;
+    raterType: VoterType;
+    createdAt: string;
+}
+
+export interface MyRatingsResponse {
+    success: boolean;
+    data: MyRating[];
+    message?: string;
+}
 const HACKATHON_LIST_TAG = 'HackathonList';
 const HACKATHON_DETAILS_TAG = 'HackathonDetails';
 const HACKATHON_LEADERBOARD_TAG = 'HackathonLeaderboard';
 const HACKATHON_CATEGORIES_TAG = 'HackathonCategories';
 const HACKATHON_MY_PROJECTS_TAG = 'HackathonMyProjects';
-
+const HACKATHON_MY_RATINGS_TAG = 'HackathonMyRatings';
 export const hackathonApi = createApi({
     reducerPath: 'hackathonApi',
     baseQuery: fetchBaseQuery({
@@ -152,7 +189,8 @@ export const hackathonApi = createApi({
         HACKATHON_LEADERBOARD_TAG,
         HACKATHON_CATEGORIES_TAG,
         HACKATHON_MY_PROJECTS_TAG,
-        USER_PROJECTS_TAG
+        USER_PROJECTS_TAG,
+        HACKATHON_MY_RATINGS_TAG
     ],
 
     endpoints: (builder) => ({
@@ -301,16 +339,15 @@ export const hackathonApi = createApi({
                 body: body,
             }),
             // Рейтинг оновлює лідерборд. Також може оновити деталі (напр. середній бал)
-            invalidatesTags: [HACKATHON_LEADERBOARD_TAG, HACKATHON_DETAILS_TAG],
+            invalidatesTags: [HACKATHON_LEADERBOARD_TAG, HACKATHON_DETAILS_TAG, HACKATHON_MY_RATINGS_TAG],
         }),
 
         // 11. router.get('/:id/leaderboard', hackathonController.getLeaderboard);
-        getLeaderboard: builder.query<LeaderboardEntry[], string>({
+        getLeaderboard: builder.query<DetailedLeaderboardEntry[], string>({
             query: (id) => `/${id}/leaderboard`,
             transformResponse: (response: LeaderboardResponse) => response.data,
             providesTags: (result, error, id) => [{ type: HACKATHON_LEADERBOARD_TAG, id }],
         }),
-
         // 12. router.get('/categories/themes', hackathonController.getThemeCategories);
         getThemeCategories: builder.query<HackathonThemeCategory[], void>({
             query: () => '/categories/themes',
@@ -342,7 +379,16 @@ export const hackathonApi = createApi({
                 HACKATHON_LIST_TAG
             ],
         }),
+        getMyRatedProjects: builder.query<MyRating[], string>({
+            query: (hackathonId) => `/${hackathonId}/my-ratings`,
 
+            transformResponse: (response: MyRatingsResponse) => {
+                return response.data;
+            },
+            providesTags: (result, error, hackathonId) => [
+                { type: HACKATHON_MY_RATINGS_TAG, id: hackathonId }
+            ],
+        }),
     }),
 });
 
@@ -362,5 +408,6 @@ export const {
     useGetThemeCategoriesQuery,
     useGetRatingCategoriesQuery,
     useUpdateHackathonStatusMutation,
-    useGetMyHackathonProjectsQuery
+    useGetMyHackathonProjectsQuery,
+    useGetMyRatedProjectsQuery
 } = hackathonApi;

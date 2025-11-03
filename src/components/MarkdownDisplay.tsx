@@ -8,6 +8,7 @@ interface MarkdownDisplayProps {
 
 export const MarkdownDisplay: React.FC<MarkdownDisplayProps> = ({text, truncate, className}) => {
     const truncateMarkdown = (text: string, limit = truncate) => {
+        if(!limit) limit=0;
         if (text.length <= limit || limit === 0) return text;
         return text.slice(0, limit).trim() + "…";
     };

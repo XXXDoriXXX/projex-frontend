@@ -3,7 +3,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "../../../../components/avat
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 
-// Тип учасника з твого hackathon.types.ts
 type Participant = {
     user: {
         id: string;
