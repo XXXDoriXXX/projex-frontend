@@ -42,7 +42,6 @@ export function StepCriteria() {
             </div>
         </div>
 
-        {/* Існуючі критерії */}
         <div className="space-y-3">
             <Label>Оберіть існуючі критерії</Label>
             <div className="flex flex-wrap gap-2">
@@ -63,10 +62,9 @@ export function StepCriteria() {
             </div>
         </div>
 
-        {/* Нові критерії */}
         <div className="space-y-3">
             <Label htmlFor="newCategory">Додати новий критерій</Label>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
                 <Input
                     id="newCategory"
                     type="text"
@@ -74,9 +72,13 @@ export function StepCriteria() {
                     value={newCategoryInput}
                     onChange={(e) => setNewCategoryInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddNewCategory())}
-                    className="rounded-2xl bg-secondary/50"
+                    className="rounded-2xl bg-secondary/50 h-12"
                 />
-                <Button type="button" onClick={handleAddNewCategory} className="rounded-xl bg-primary/90 hover:bg-primary">
+                <Button
+                    type="button"
+                    onClick={handleAddNewCategory}
+                    className="rounded-xl bg-primary/90 hover:bg-primary w-full sm:w-auto h-12"
+                >
                     Додати
                 </Button>
             </div>

@@ -5,7 +5,7 @@ import DisplayForm from "../../../components/DisplayForm.tsx";
 import FormInput from "../../../components/FormInput.tsx";
 import Button from "../../../components/Button.tsx";
 import SocialButton from "../../../components/SocialButton.tsx";
-import logo from "../../../assets/img/logo.png";
+import logo from "../../../assets/img/logo_small.png";
 import {useNavigate} from "react-router-dom";
 import axios from "axios";
 import DisplayDiv from "../../../components/DisplayDiv.tsx";

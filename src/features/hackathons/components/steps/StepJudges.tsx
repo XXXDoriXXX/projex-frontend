@@ -24,7 +24,7 @@ export function StepJudges(){
     const handleSearchJudge = () => {
         const email = judgeEmail.trim();
         if (email) {
-            lookupUser(email); // Викликаємо API
+            lookupUser(email);
         }
     };
     useEffect(() => {
@@ -64,27 +64,26 @@ export function StepJudges(){
 
         <div className="space-y-3">
             <Label htmlFor="judgeEmail">Email судді</Label>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
                 <div className="relative flex-1">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                     <Input
                         id="judgeEmail"
                         type="email"
                         placeholder="judge@example.com"
-                        value={judgeEmail} // <--- Локальний стан
-                        onChange={(e) => setJudgeEmail(e.target.value)} // <--- Локальний стан
-                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleSearchJudge())} // <--- Локальний обробник
-                        className="rounded-2xl bg-secondary/50 pl-10"
-                        disabled={isSearchingJudge} // <--- Стан з RTK Query
+                        value={judgeEmail}
+                        onChange={(e) => setJudgeEmail(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleSearchJudge())}
+                        className="rounded-2xl bg-secondary/50 pl-10 h-12"
+                        disabled={isSearchingJudge}
                     />
                 </div>
                 <Button
                     type="button"
                     onClick={handleSearchJudge}
                     disabled={isSearchingJudge || !judgeEmail.trim()}
-                    className="flex rounded-xl hover:scale-110 bg-primary/90 hover:bg-primary gap-2"
+                    className="flex w-full sm:w-auto justify-center rounded-xl hover:scale-110 bg-primary/90 hover:bg-primary gap-2 h-12"
                 >
-                    {/* {isSearchingJudge ? <Loading /> : <UserPlus className="size-6" />} */}
                     <UserPlus className="size-6" />
                     {isSearchingJudge ? 'Пошук...' : 'Знайти'}
                 </Button>
@@ -92,9 +91,10 @@ export function StepJudges(){
             <div className="min-h-10">
                 {isSearchingJudge ? (
                     <p className="text-sm text-primary/70">Шукаємо користувача...</p>
-                ) : searchedUser ? ( // <--- Локальний стан
-                    <div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-2xl border border-primary/50 shadow-md">
-                        <Avatar className="size-10">
+                ) : searchedUser ? (
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-secondary/50 rounded-2xl border border-primary/50 shadow-md">
+
+                    <Avatar className="size-10">
                             <AvatarImage src={searchedUser.avatarUrl} alt={searchedUser.name} />
                             <AvatarFallback className="bg-primary/10 text-primary">
                                 {searchedUser.name?.charAt(0)?.toUpperCase() || 'U'}
@@ -106,14 +106,14 @@ export function StepJudges(){
                         </div>
                         <Button
                             type="button"
-                            onClick={handleAddJudge} // <--- Локальний обробник
+                            onClick={handleAddJudge}
                             disabled={judgeIds.some(c => c.id === searchedUser.id)}
                             className="rounded-xl bg-primary/90 hover:bg-primary flex-shrink-0"
                         >
                             {judgeIds.some(c => c.id === searchedUser.id) ? 'Додано' : 'Додати'}
                         </Button>
                     </div>
-                ) : judgeSearchError ? ( // <--- Стан з RTK Query
+                ) : judgeSearchError ? (
                     <p className="text-sm text-destructive">Користувач не знайдений.</p>
                 ) : null}
             </div>
@@ -126,7 +126,7 @@ export function StepJudges(){
                     {judgeIds.map((judge) => (
                         <div
                             key={judge.id}
-                            className="flex items-center gap-3 p-3 bg-secondary/50 rounded-2xl border border-border/50"
+                            className="flex items-center flex-wrap sm:flex-nowrap gap-3 p-3 bg-secondary/50 rounded-2xl border border-border/50"
                         >
                             <Avatar className="size-10">
                                 <AvatarImage src={judge.avatar} alt={judge.name} />

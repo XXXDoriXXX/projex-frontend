@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import logo from "../assets/img/logo.png";
+import logo from "../assets/img/logo_small.png";
 import Button from "./Button.tsx";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -165,7 +165,7 @@ const Header = () => {
             >
                 <Button
                     variant="glass"
-                    className="fixed top-5 left-5 z-999 rounded-full p-2 aspect-square flex items-center justify-center shadow-lg"
+                    className="fixed top-5 left-5 z-999 rounded-full p-2 aspect-square flex items-center justify-center shadow-lg h-8"
                     onClick={() => navigate(-1)}
                     aria-label="Повернутись назад"
                 >
@@ -191,7 +191,7 @@ const Header = () => {
                         <motion.img
                             src={logo}
                             alt="Projex Logo"
-                            className="h-10 w-auto object-contain select-none"
+                            className="h-24 w-auto object-contain select-none"
                             whileHover={{ scale: 1.1 }}
                             transition={{ type: "spring", stiffness: 400, damping: 10 }}
                         />

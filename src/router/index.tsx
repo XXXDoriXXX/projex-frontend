@@ -20,7 +20,6 @@ import ProjectListPage from "../features/project/pages/ProjectListPage.tsx";
 
 export const router = createBrowserRouter([
     {
-        // Всі маршрути "всередині" програми тепер використовують AppLayout
         path: "/",
         element: <AppLayout />,
         children: [

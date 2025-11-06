@@ -177,8 +177,16 @@ export function ProjectListPage() {
     return (
         <div className="min-h-screen bg-background text-foreground relative">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-cyan-500/10 z-0" />
-            <div className="absolute top-20 right-20 size-96 bg-primary/20 rounded-full blur-3xl" />
-            <div className="absolute bottom-20 left-20 size-96 bg-cyan-500/10 rounded-full blur-3xl" />
+
+            <div
+                className="absolute top-10 right-10 size-56 md:top-20 md:right-20 md:size-96
+                       bg-primary/20 rounded-full blur-3xl z-0"
+            />
+
+            <div
+                className="absolute bottom-10 left-10 size-56 md:bottom-20 md:left-20 md:size-96
+                       bg-cyan-500/10 rounded-full blur-3xl z-0"
+            />
 
             <div className="relative z-10 container mx-auto px-4 pt-32 pb-24">
                 <motion.h1
@@ -190,7 +198,7 @@ export function ProjectListPage() {
                 </motion.h1>
 
                 <motion.div
-                    className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10 p-4 bg-card/50 backdrop-blur-2xl border border-border/50 rounded-2xl shadow-xl
+                    className="grid grid-cols-1 gap-4 mb-10 p-4 bg-card/50 backdrop-blur-2xl border border-border/50 rounded-2xl shadow-xl
                sticky top-22 z-20 drop-shadow-[0_0_50px_#411578FF]"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -293,7 +301,8 @@ export function ProjectListPage() {
                 <AnimatePresence>
                     {showScrollTop && (
                         <motion.button
-                            className="fixed bottom-10 right-10 z-50 p-3 bg-primary text-primary-foreground rounded-full shadow-lg hover:bg-primary/90 transition-colors"
+
+                            className="fixed bottom-4 right-4 md:bottom-10 md:right-10 z-50 p-3 bg-primary text-primary-foreground rounded-full shadow-lg hover:bg-primary/90 transition-colors"
                             onClick={scrollToTop}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}

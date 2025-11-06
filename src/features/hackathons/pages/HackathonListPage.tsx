@@ -142,8 +142,16 @@ export function HackathonListPage() {
     return (
         <div className="min-h-screen bg-background text-foreground relative">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-cyan-500/10 z-0" />
-            <div className="absolute top-20 right-20 size-96 bg-primary/20 rounded-full blur-3xl" />
-            <div className="absolute bottom-20 left-20 size-96 bg-cyan-500/10 rounded-full blur-3xl" />
+
+            <div
+                className="absolute top-10 right-10 size-56 md:top-20 md:right-20 md:size-96
+                       bg-primary/20 rounded-full blur-3xl z-0"
+            />
+
+            <div
+                className="absolute bottom-10 left-10 size-56 md:bottom-20 md:left-20 md:size-96
+                       bg-cyan-500/10 rounded-full blur-3xl z-0"
+            />
 
             <div className="relative z-10 container mx-auto px-4 pt-32 pb-24">
                 <motion.h1
