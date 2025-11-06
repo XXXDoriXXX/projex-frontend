@@ -6,7 +6,7 @@ import {Badge} from "../../../components/badge.tsx";
 
 import {
     ArrowLeft,
-    Check, // <--- Додано Check
+    Check,
     ChevronRight,
     FileText,
     Rocket,
@@ -137,7 +137,7 @@ function CreateHackathonLayout() {
                             className="flex items-center gap-2 rounded-xl px-3 py-2 md:px-4 md:py-3"
                         >
                             <ArrowLeft className="size-5" />
-                            <span className="hidden md:inline">Back to Home</span>
+                            <span className="hidden md:inline">Вернутись</span>
                         </Button>
 
                         <div className="flex items-center gap-3">

@@ -24,7 +24,7 @@ import {
     Rocket, Star, Upload,
     UserPlus,
     Users,
-    Video, X
+    Video, X, Trophy
 } from "lucide-react";
 import {useCreateProjectMutation, useGetTechnologiesQuery} from "../api/projectApi.ts";
 import Loading from "../../../components/Loading.tsx";
@@ -210,9 +210,8 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
 
         const file = files[0];
 
-        // Створюємо клієнтський ID та тимчасовий URL
         const clientId = Date.now().toString();
-        const tempUrl = URL.createObjectURL(file); // Для локального прев'ю
+        const tempUrl = URL.createObjectURL(file);
 
         const newFile: MediaFile = {
             id: clientId,
@@ -226,39 +225,45 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
             uploadError: false
         };
 
-        // 1. Додаємо файл до списку
         setMediaFiles(prev => [...prev, newFile]);
 
         try {
-            // 2. Викликаємо реальну функцію завантаження
             const result = await uploadMediaToServer(file, token, (progress) => {
                 updateProgress(clientId, progress);
             });
+            setMediaFiles(prev => prev.map(f => {
+                if (f.id === clientId) {
 
-            // 3. Оновлюємо фінальний стан: completed, зберігаємо ServerID
-            setMediaFiles(prev => prev.map(f => f.id === clientId
-                ? {
-                    ...f,
-                    serverId: result.id,
-                    isUploading: false,
-                    uploadProgress: 100,
-                    url: result.url // Використовуємо фінальний URL від сервера
+                    URL.revokeObjectURL(f.url);
+                    return {
+                        ...f,
+                        serverId: result.id,
+                        isUploading: false,
+                        uploadProgress: 100,
+                        url: result.url
+                    };
                 }
-                : f
-            ));
+                return f;
+            }));
         } catch (error) {
             console.error("Media upload error:", error);
-            // 4. Обробка помилки
-            setMediaFiles(prev => prev.map(f => f.id === clientId
-                ? { ...f, isUploading: false, uploadProgress: 0, uploadError: true }
-                : f
-            ));
-        } finally {
-            // 5. Очищаємо тимчасовий URL, щоб запобігти витоку пам'яті
-            URL.revokeObjectURL(tempUrl);
-        }
-    };
 
+            setMediaFiles(prev =>
+                prev.map(f => {
+                    if (f.id === clientId) {
+                        return {
+                            ...f,
+                            isUploading: false,
+                            uploadProgress: 0,
+                            uploadError: true,
+                            serverId: undefined,
+                        };
+                    }
+                    return f;
+                })
+            );
+        };
+    }
     const handleSetMainImage = (id: string) => {
         setMediaFiles(mediaFiles.map(file => ({
             ...file,
@@ -361,48 +366,58 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
         try {
             const result = await createProject(projectData).unwrap();
 
-            // 2. Зберігаємо ID нового проєкту у стані
             const newProjectId = result.data.id;
             setNewlyCreatedProjectId(newProjectId);
         } catch (error) {
-            // Помилка буде оброблена в submitErrorData
             console.error("Submission failed:", error);
         }
     };
     return (
         <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-cyan-500/10" />
-            <div className="absolute top-20 right-20 size-96 bg-primary/20 rounded-full blur-3xl" />
-            <div className="absolute bottom-20 left-20 size-96 bg-cyan-500/10 rounded-full blur-3xl" />
-            <div className="absolute top-1/3 left-1/3 size-96 bg-pink-500/10 rounded-full blur-3xl" />
-            <Button variant={"glass"} type={"submit"} className={"absolute top-6 left-6 z-50"}>Back to Home</Button>
+            <div className="absolute top-10 right-10 size-56 md:top-20 md:right-20 md:size-96 bg-primary/20 rounded-full blur-3xl z-0" />
+            <div className="absolute bottom-10 left-10 size-56 md:bottom-20 md:left-20 md:size-96 bg-cyan-500/10 rounded-full blur-3xl z-0" />
+            <div className="absolute top-1/3 left-1/3 size-56 md:size-96 bg-pink-500/10 rounded-full blur-3xl z-0" />
             <div className="fixed top-0 left-0 right-0 z-40 bg-card/80 backdrop-blur-xl border-b border-border/50">
-                <div className="container mx-auto px-4 py-4">
-                    <div className="flex items-center justify-between mb-2">
+                <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+
+
+                    <div className="flex items-center gap-3">
+                        <Button
+                            variant="glass"
+                            type="button"
+                            onClick={() => navigate('/')}
+                            className="flex items-center gap-2 rounded-xl px-3 py-2 md:px-4 md:py-3"
+                        >
+                            <ArrowLeft className="size-5" />
+                            <span className="hidden md:inline">Вернутись</span>
+                        </Button>
+
                         <div className="flex items-center gap-3">
-                            <div className="size-10 bg-gradient-to-br from-primary to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-primary/30">
-                                <Code2 className="size-6 text-white" />
+                            <div className="size-9 sm:size-10 bg-gradient-to-br from-primary to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-primary/30">
+                                <Trophy className="size-5 sm:size-6 text-white" />
                             </div>
                             <div>
-                                <h2 className="text-sm">Створення проекту</h2>
-                                <p className="text-xs text-muted-foreground">
+                                <h2 className="text-xs sm:text-sm">Створення проєкту</h2>
+                                <p className="text-[10px] sm:text-xs text-muted-foreground">
                                     Крок {currentStepIndex + 1} з {steps.length}
                                 </p>
                             </div>
                         </div>
-                        <Badge className="bg-primary/10 text-primary border-primary/30">
+                    </div>
+
+                    <div className="flex flex-col items-end sm:items-center gap-1 sm:gap-2">
+                        <Badge className="bg-primary/10 text-primary border-primary/30 text-[10px] sm:text-xs px-2 py-1 sm:px-3 sm:py-1.5">
                             {Math.round(progress)}% завершено
                         </Badge>
+                        <Progress value={progress} className="h-1.5 sm:h-2 w-32 sm:w-48" />
                     </div>
-                    <Progress value={progress} className="h-2" />
                 </div>
             </div>
-            {/* Main Content */}
-            <div className="relative min-h-screen px-4 py-24 pt-32">
+            <div className="relative min-h-screen px-3 py-20 pt-28 sm:px-6 sm:pt-32">
                 <div className="max-w-7xl mx-auto">
-                    <div className="grid lg:grid-cols-[300px_1fr] gap-8">
+                    <div className="flex flex-col lg:grid lg:grid-cols-[300px_1fr] gap-6">
 
-                        {/* Timeline Sidebar */}
                         <div className="hidden lg:block">
                             <div className="sticky top-32 bg-card/50 backdrop-blur-2xl border border-border/50 rounded-3xl p-6 shadow-2xl">
                                 <h3 className="mb-6">Прогрес створення</h3>
@@ -512,7 +527,7 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                 />
                             )}
                             <div className="flex-1">
-                                {/* Step 1: Basics */}
+
                                 {currentStep === 'basics' && (
                                     <div className="space-y-6 animate-in fade-in duration-500">
                                         <div className="flex items-center gap-3 mb-6">
@@ -579,169 +594,175 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                         </div>
                                     </div>
                                 )}
-
-                                {/* Step 2: Media */}
-                                {currentStep === 'media' && (
-                                    <div className="space-y-6 animate-in fade-in duration-500">
-                                        <div className="flex items-center gap-3 mb-6">
-                                            <div className="size-12 bg-gradient-to-br from-primary to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-primary/30">
-                                                <ImageIcon className="size-6 text-white" />
+                                    {currentStep === 'media' && (
+                                        <div className="space-y-6 animate-in fade-in duration-500">
+                                            <div className="flex items-center gap-3 mb-6">
+                                                <div className="size-12 bg-gradient-to-br from-primary to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-primary/30">
+                                                    <ImageIcon className="size-6 text-white" />
+                                                </div>
+                                                <div>
+                                                    <h2>Медіа файли</h2>
+                                                    <p className="text-muted-foreground">Додайте фото та відео вашого проекту</p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <h2>Медіа файли</h2>
-                                                <p className="text-muted-foreground">Додайте фото та відео вашого проекту</p>
+
+
+                                            <div className="flex flex-col sm:flex-row gap-3">
+                                                <Button
+                                                    type="button"
+                                                    variant="secondary"
+                                                    onClick={() => imageInputRef.current?.click()}
+                                                    className="flex w-full sm:w-auto justify-center gap-2"
+                                                >
+                                                    <Upload className="size-6" />
+                                                    Завантажити фото
+                                                </Button>
+
+                                                <input
+                                                    ref={imageInputRef}
+                                                    id="file-image"
+                                                    type="file"
+                                                    accept="image/*"
+                                                    className="hidden"
+                                                    onChange={(e) => handleFileChange(e, 'image')}
+                                                />
+
+                                                <Button
+                                                    type="button"
+                                                    variant="secondary"
+                                                    onClick={() => videoInputRef.current?.click()}
+                                                    className="flex w-full sm:w-auto justify-center gap-2"
+                                                >
+                                                    <Video className="size-6" />
+                                                    Завантажити відео
+                                                </Button>
+
+                                                <input
+                                                    ref={videoInputRef}
+                                                    id="file-video"
+                                                    type="file"
+                                                    accept="video/*"
+                                                    className="hidden"
+                                                    onChange={(e) => handleFileChange(e, 'video')}
+                                                />
                                             </div>
-                                        </div>
 
-                                        {/* Кнопки та приховані поля вводу для реального завантаження */}
-                                        <div className="flex gap-3">
-                                            {/* КНОПКА: Завантажити фото */}
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                onClick={() => imageInputRef.current?.click()}
-                                                className="flex gap-8 hover:scale-10"
-                                            >
-                                                <Upload className="size-6" />
-                                                Завантажити фото
-                                            </Button>
+                                            {mediaFiles.length > 0 ? (
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                                                    {mediaFiles.map((file) => (
+                                                        <div
+                                                            key={file.id}
 
-                                            {/* ПРИХОВАНЕ ПОЛЕ ВВОДУ ДЛЯ ФОТО */}
-                                            <input
-                                                ref={imageInputRef} // Призначаємо Ref
-                                                id="file-image"
-                                                type="file"
-                                                accept="image/*"
-                                                className="hidden"
-                                                onChange={(e) => handleFileChange(e, 'image')}
-                                            />
+                                                            className={`relative group rounded-2xl overflow-hidden border-2 transition-all cursor-pointer ${
+                                                                file.isMain ? 'border-primary shadow-lg shadow-primary/30' : 'border-border/50'
+                                                            } ${
+                                                                file.uploadError ? 'border-destructive' : 'bg-secondary/50'
+                                                            }`}
+                                                        >
+                                                            <div className="aspect-video">
+                                                                <div className="aspect-video">
+                                                                    {file.type === 'image' && file.url && (
 
-                                            {/* КНОПКА: Завантажити відео */}
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                // ПРИБИРАЄМО <label> та робимо Button клікабельною
-                                                onClick={() => videoInputRef.current?.click()}
-                                                className="flex gap-8 hover:scale-10"
-                                            >
-                                                <Video className="size-6" />
-                                                Завантажити відео
-                                            </Button>
+                                                                        <img
+                                                                            src={file.url}
+                                                                            alt={file.name || "Project media"}
+                                                                            className="w-full h-full object-cover"
+                                                                        />
 
-                                            {/* ПРИХОВАНЕ ПОЛЕ ВВОДУ ДЛЯ ВІДЕО */}
-                                            <input
-                                                ref={videoInputRef} // Призначаємо Ref
-                                                id="file-video"
-                                                type="file"
-                                                accept="video/*"
-                                                className="hidden"
-                                                onChange={(e) => handleFileChange(e, 'video')}
-                                            />
-                                        </div>
+                                                                    )}
+                                                                    {file.type === 'video' && file.url && (
 
-                                        {/* Список завантажених медіафайлів */}
-                                        {mediaFiles.length > 0 ? (
-                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                                {mediaFiles.map((file) => (
-                                                    <div
-                                                        key={file.id}
-                                                        className={`relative group rounded-2xl overflow-hidden border-2 transition-all ${
-                                                            file.isMain ? 'border-primary shadow-lg shadow-primary/30' : 'border-border/50'
-                                                        } ${
-                                                            file.uploadError ? 'border-destructive' : 'bg-secondary/50' // Червона рамка при помилці
-                                                        }`}
-                                                    >
-                                                        <div className="aspect-video">
-                                                            {file.type === 'image' ? (
-                                                                <img
-                                                                    src={file.url}
-                                                                    alt={file.name}
-                                                                    className="w-full h-full object-cover"
-                                                                />
-                                                            ) : (
-                                                                // НОВИЙ БЛОК: Відображення відео
-                                                                <video
-                                                                    src={file.url}
-                                                                    title={file.name}
-                                                                    className="w-full h-full object-cover bg-black"
-                                                                    controls // Дозволяє користувачу керувати відтворенням
-                                                                    muted // Рекомендовано для автозапуску, хоча тут немає автозапуску, це гарна практика
-                                                                    playsInline // Важливо для мобільних пристроїв
-                                                                >
-                                                                    Ваш браузер не підтримує тег video.
-                                                                </video>
-                                                            )}
-                                                        </div>
-
-                                                        {/* Індикатор прогресу (Завантаження) */}
-                                                        {file.isUploading && file.uploadProgress < 100 && (
-                                                            <div className="absolute inset-0 flex items-center justify-center bg-black/80">
-                                                                <div className="p-4 w-4/5">
-                                                                    <p className="text-xs text-white mb-1">Завантаження... {file.uploadProgress}%</p>
-                                                                    <Progress value={file.uploadProgress} className="h-1 bg-white/20" />
+                                                                        <video
+                                                                            src={file.url}
+                                                                            controls
+                                                                            className="w-full h-full object-cover"
+                                                                        >
+                                                                            Ваш браузер не підтримує тег video.
+                                                                        </video>
+                                                                    )}
                                                                 </div>
                                                             </div>
-                                                        )}
 
-                                                        {/* Помилка завантаження */}
-                                                        {file.uploadError && (
-                                                            <div className="absolute inset-0 flex items-center justify-center bg-destructive/80 p-2">
-                                                                <p className="text-xs text-white text-center">Помилка завантаження. Натисніть X для видалення.</p>
-                                                            </div>
-                                                        )}
+                                                            {file.isUploading && file.uploadProgress < 100 && (
+                                                                <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+                                                                    <div className="p-4 w-4/5">
+                                                                        <p className="text-xs text-white mb-1">Завантаження... {file.uploadProgress}%</p>
+                                                                        <Progress value={file.uploadProgress} className="h-1 bg-white/20" />
+                                                                    </div>
+                                                                </div>
+                                                            )}
 
-                                                        {/* Кнопки керування (Показуються при ховері або коли не йде завантаження) */}
-                                                        {file.uploadProgress === 100 && (
-                                                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-
-                                                                {/* Кнопка "Головне" */}
-                                                                {!file.isMain && file.type === 'image' && (
+                                                            {file.uploadError && (
+                                                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-destructive/80 p-2">
+                                                                    <p className="text-sm text-white text-center mb-2">Помилка завантаження.</p>
                                                                     <Button
                                                                         type="button"
-                                                                        onClick={() => handleSetMainImage(file.id)}
-                                                                        className="rounded-xl bg-primary/90 hover:bg-primary gap-1"
+                                                                        onClick={() => handleRemoveMedia(file.id)}
+                                                                        variant="danger"
+                                                                        className="bg-white/20 hover:bg-white/30 text-white rounded-full p-2 h-auto"
                                                                     >
-                                                                        <Star className="size-3" />
-                                                                        Головне
+                                                                        <X className="size-4" /> Видалити
                                                                     </Button>
-                                                                )}
+                                                                </div>
+                                                            )}
 
-                                                                {/* Кнопка "Видалити" */}
-                                                                <Button
-                                                                    type="button"
-                                                                    variant="ghost"
-                                                                    onClick={() => handleRemoveMedia(file.id)}
-                                                                    className="rounded-xl"
-                                                                >
-                                                                    <X className="size-3" />
-                                                                </Button>
-                                                            </div>
-                                                        )}
 
-                                                        {/* Бедж "Головне" */}
-                                                        {file.isMain && (
-                                                            <div className="absolute top-2 right-2">
-                                                                <Badge className="bg-primary/90 backdrop-blur-sm gap-1">
-                                                                    <Star className="size-3" />
-                                                                    Головне
-                                                                </Badge>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <div className="border-2 border-dashed border-border/50 rounded-2xl p-12 text-center">
-                                                <ImageIcon className="size-12 text-muted-foreground mx-auto mb-3" />
-                                                <p className="text-muted-foreground mb-2">Медіа файли не додані</p>
-                                                <p className="text-sm text-muted-foreground">
-                                                    Додайте фото або відео, щоб показати ваш проект
-                                                </p>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                                {/* Step 3: Links */}
+                                                            {file.uploadProgress === 100 && !file.uploadError && (
+                                                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2
+                                            sm:opacity-0 md:opacity-0 lg:opacity-0 ">
+
+                                                                </div>
+                                                            )}
+
+
+                                                            {file.uploadProgress === 100 && !file.uploadError && (
+                                                                <>
+
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="danger"
+                                                                        onClick={() => handleRemoveMedia(file.id)}
+                                                                        className="absolute top-2 left-2 z-10 rounded-full p-1.5 bg-black/50 hover:bg-destructive/70 transition-all shadow-lg"
+                                                                    >
+                                                                        <X className="size-3" />
+                                                                    </Button>
+
+                                                                    {!file.isMain && file.type === 'image' && (
+
+                                                                        <Button
+                                                                            onClick={() => handleSetMainImage(file.id)}
+                                                                            className="absolute top-2 right-2 z-10 rounded-full h-4 p-1.5 bg-black/50 hover:bg-primary transition-all shadow-lg"
+                                                                        >
+                                                                            <Star className="size-3" />
+                                                                        </Button>
+                                                                    )}
+
+
+                                                                    {file.isMain && (
+                                                                        <div className="absolute top-2 right-2 z-10">
+                                                                            <Badge className="bg-primary/90 backdrop-blur-sm gap-1">
+                                                                                <Star className="size-3" />
+                                                                                Головне
+                                                                            </Badge>
+                                                                        </div>
+                                                                    )}
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="border-2 border-dashed border-border/50 rounded-2xl p-12 text-center">
+                                                    <ImageIcon className="size-12 text-muted-foreground mx-auto mb-3" />
+                                                    <p className="text-muted-foreground mb-2">Медіа файли не додані</p>
+                                                    <p className="text-sm text-muted-foreground">
+                                                        Додайте фото або відео, щоб показати ваш проект
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
                                 {currentStep === 'links' && (
                                     <div className="space-y-6 animate-in fade-in duration-500">
                                         <div className="flex items-center gap-3 mb-6">
@@ -757,7 +778,7 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                         <div className="space-y-3">
                                             <Label>Посилання GitHub</Label>
                                             {githubLinks.map((link, index) => (
-                                                <div key={index} className="flex gap-2">
+                                                <div key={index} className="flex flex-col sm:flex-row gap-2">
                                                     <Input
                                                         type="url"
                                                         placeholder="https://github.com/username/repo"
@@ -770,9 +791,10 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                             type="button"
                                                             variant="ghost"
                                                             onClick={() => handleRemoveGithubLink(index)}
-                                                            className="rounded-xl bg-secondary/50 border-border/50 hover:bg-destructive/20 hover:border-destructive"
+                                                            className="rounded-xl w-full sm:w-auto justify-center bg-secondary/50 border-border/50 hover:bg-destructive/20 hover:border-destructive"
                                                         >
-                                                            <X className="size-4" />
+                                                            <X className="size-4 mr-2 sm:mr-0" />
+                                                            <span className="sm:hidden">Видалити</span>
                                                         </Button>
                                                     )}
                                                 </div>
@@ -781,7 +803,7 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                 type="button"
                                                 variant="ghost"
                                                 onClick={handleAddGithubLink}
-                                                className="flex gap-8 hover:scale-0"
+                                                className="flex w-full sm:w-auto justify-center gap-2 hover:scale-0"
                                             >
                                                 <Plus className="size-6" />
                                                 Додати репозиторій
@@ -807,7 +829,6 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                     </div>
                                 )}
 
-                                {/* Step 4: Details */}
                                 {currentStep === 'details' && (
                                     <div className="space-y-6 animate-in fade-in duration-500">
                                         <div className="flex items-center gap-3 mb-6">
@@ -925,7 +946,7 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                     </div>
                                 )}
 
-                                {/* Step 5: Team */}
+
                                 {currentStep === 'team' && (
                                     <div className="space-y-6 animate-in fade-in duration-500">
                                         <div className="flex items-center gap-3 mb-6">
@@ -940,7 +961,7 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
 
                                         <div className="space-y-3">
                                             <Label htmlFor="collaboratorEmail">Email співавтора</Label>
-                                            <div className="flex gap-2">
+                                            <div className="flex flex-col sm:flex-row gap-2">
                                                 <div className="relative flex-1">
                                                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                                                     <Input
@@ -950,16 +971,17 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                         value={collaboratorEmail}
                                                         onChange={(e) => setCollaboratorEmail(e.target.value)}
                                                         onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleSearchUser())}
-                                                        className="rounded-2xl bg-secondary/50 backdrop-blur-sm border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20 pl-10"
+                                                        className="rounded-2xl bg-secondary/50 backdrop-blur-sm border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20 pl-10 h-12" // Додано h-12
                                                         disabled={isSearching}
                                                     />
                                                 </div>
                                                 <Button
                                                     type="button"
                                                     variant="secondary"
-                                                    onClick={handleSearchUser} // Кнопка викликає пошук
+                                                    onClick={handleSearchUser}
                                                     disabled={isSearching || !collaboratorEmail.trim()}
-                                                    className="flex rounded-xl hover:scale-110 bg-primary/90 hover:bg-primary gap-2"
+
+                                                    className="flex w-full sm:w-auto justify-center rounded-xl hover:scale-110 bg-primary/90 hover:bg-primary gap-2 h-12"
                                                 >
                                                     {isSearching ? <Loading /> : <UserPlus className="size-6" />}
                                                     {isSearching ? 'Пошук...' : 'Знайти'}
@@ -1002,7 +1024,7 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                     {collaborators.map((collab) => (
                                                         <div
                                                             key={collab.id}
-                                                            className="flex items-center gap-3 p-3 bg-secondary/50 rounded-2xl border border-border/50 hover:border-primary/30 transition-all"
+                                                            className="flex items-center flex-wrap sm:flex-nowrap gap-3 p-3 bg-secondary/50 rounded-2xl border border-border/50 hover:border-primary/30 transition-all"
                                                         >
                                                             <Avatar className="size-10">
                                                                 <AvatarImage src={collab.avatar} alt={collab.name} />
@@ -1038,7 +1060,6 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                     </div>
                                 )}
 
-                                {/* Step 6: Review */}
                                 {currentStep === 'review' && (
                                     <div className="space-y-6 animate-in fade-in duration-500">
                                         <div className="flex items-center gap-3 mb-6">
@@ -1052,7 +1073,7 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                         </div>
 
                                         <div className="space-y-4">
-                                            {/* Project Name & Visibility */}
+
                                             <div className="p-4 bg-secondary/30 rounded-2xl border border-border/50">
                                                 <div className="flex items-center justify-between mb-2">
                                                     <Label className="text-muted-foreground">Назва проекту</Label>
@@ -1081,7 +1102,6 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                 </div>
                                             </div>
 
-                                            {/* Media */}
                                             {mediaFiles.length > 0 && (
                                                 <div className="p-4 bg-secondary/30 rounded-2xl border border-border/50">
                                                     <div className="flex items-center justify-between mb-3">
@@ -1099,7 +1119,11 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                         {mediaFiles.slice(0, 4).map((file) => (
                                                             <div key={file.id} className="size-16 rounded-xl overflow-hidden bg-secondary border border-border/50">
                                                                 {file.type === 'image' ? (
-                                                                    <img src={file.url} alt="" className="w-full h-full object-cover" />
+                                                                    <img
+                                                                        src={file.url}
+                                                                        alt={file.name || "Project media"}
+                                                                        className="w-full h-full object-cover"
+                                                                    />
                                                                 ) : (
                                                                     <div className="w-full h-full flex items-center justify-center">
                                                                         <Video className="size-6 text-primary" />
@@ -1116,7 +1140,6 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                 </div>
                                             )}
 
-                                            {/* Technologies */}
                                             {technologies.length > 0 && (
                                                 <div className="p-4 bg-secondary/30 rounded-2xl border border-border/50">
                                                     <div className="flex items-center justify-between mb-3">
@@ -1140,7 +1163,6 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                 </div>
                                             )}
 
-                                            {/* Team */}
                                             {collaborators.length > 0 && (
                                                 <div className="p-4 bg-secondary/30 rounded-2xl border border-border/50">
                                                     <div className="flex items-center justify-between mb-3">
@@ -1172,7 +1194,6 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                 </div>
                                             )}
 
-                                            {/* Links */}
                                             {(githubLinks.some(l => l.trim()) || deploymentLink) && (
                                                 <div className="p-4 bg-secondary/30 rounded-2xl border border-border/50">
                                                     <div className="flex items-center justify-between mb-3">
@@ -1207,14 +1228,13 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                 )}
                             </div>
 
-                            {/* Navigation Buttons */}
-                            <div className="flex items-center justify-between pt-6 mt-6 border-t border-border/50">
+                            <div className="flex flex-col-reverse sm:flex-row items-center justify-between pt-6 mt-6 border-t border-border/50 gap-3">
                                 <Button
                                     type="button"
                                     variant="ghost"
                                     onClick={handlePrevStep}
                                     disabled={currentStepIndex === 0}
-                                    className="rounded-xl flex gap-8 hover:scale-10 py-4 bg-secondary/50 border-border/50 hover:bg-secondary/70 disabled:opacity-50"
+                                    className="rounded-xl flex w-full sm:w-auto justify-center py-3 bg-secondary/50 border-border/50 hover:bg-secondary/70 disabled:opacity-50"
                                 >
                                     <ArrowLeft className="size-6 mr-2" />
                                     Назад
@@ -1225,7 +1245,7 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                         type="button"
                                         onClick={handleSubmit}
                                         disabled={!canProceed()}
-                                        className="rounded-xl bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 shadow-xl shadow-primary/30 gap-2"
+                                        className="rounded-xl w-full sm:w-auto bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 shadow-xl shadow-primary/30 gap-2"
                                     >
                                         <Rocket className="size-4" />
                                         Опублікувати проект
@@ -1235,7 +1255,7 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                         type="button"
                                         onClick={handleNextStep}
                                         disabled={!canProceed()}
-                                        className="rounded-xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 disabled:opacity-50"
+                                        className="w-full sm:w-auto rounded-xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 disabled:opacity-50"
                                     >
                                         Далі
                                         <ChevronRight className="size-6 ml-2" />
