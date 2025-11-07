@@ -73,6 +73,28 @@ interface SelectedTechnology {
     id: string;
     name: string;
 }
+
+const isValidUrl = (url: string) => {
+    if (!url) return true;
+    try {
+        new URL(url);
+        return true;
+    } catch (e) {
+        return false;
+    }
+};
+const GITHUB_REGEX = /^https?:\/\/(www\.)?github\.com\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_.-]+(\/.*)?$/i;
+const isGitHubUrlValid = (url: string) => {
+    if (!url) return true;
+    return GITHUB_REGEX.test(url);
+};
+
+const PROJECT_NAME_MIN_LENGTH = 3;
+const PROJECT_NAME_MAX_LENGTH = 50;
+const DESCRIPTION_MIN_LENGTH = 10;
+const DESCRIPTION_MAX_LENGTH = 5000;
+
+
 export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
     const [currentStep, setCurrentStep] = useState<ProjectStep>('basics');
     const [projectName, setProjectName] = useState('');
@@ -89,7 +111,8 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
     const [showDismissableError, setShowDismissableError] = useState(false);
     const currentStepIndex = steps.findIndex(s => s.id === currentStep);
     const progress = ((currentStepIndex + 1) / steps.length) * 100;
-    const userId = useSelector((state: RootState) => state.auth.user?.id || 'TEST_USER_ID');
+    const currentUserId = useSelector((state: RootState) => state.auth.user?.id);
+    const userId = currentUserId || 'TEST_USER_ID';
     const [selectedTechnologies, setSelectedTechnologies] = useState<SelectedTechnology[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const { data: allTechnologies = [], isLoading: isTechLoading } = useGetTechnologiesQuery();
@@ -101,6 +124,10 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
     const imageInputRef = useRef<HTMLInputElement>(null);
     const [newlyCreatedProjectId, setNewlyCreatedProjectId] = useState<string | null>(null);
     const videoInputRef = useRef<HTMLInputElement>(null);
+
+    const [linkErrors, setLinkErrors] = useState<{ github: string | null; demo: string | null }>({ github: null, demo: null });
+    const linkValidationPassed = !linkErrors.github && !linkErrors.demo;
+
     const handleAddTechnology = (tech: SelectedTechnology) => {
         if (!selectedTechnologies.find(t => t.id === tech.id)) {
             setSelectedTechnologies([...selectedTechnologies, tech]);
@@ -108,7 +135,6 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
             setShowSuggestions(false);
         }
     };
-    const currentUserId = useSelector((state: RootState) => state.auth.user?.id);
     const updateProgress = (fileId: string, progress: number) => {
         setMediaFiles(prev => prev.map(f => f.id === fileId ? { ...f, uploadProgress: progress, uploadError: false } : f));
     };
@@ -121,13 +147,19 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
         setShowSuggestions(true);
     };
     const handleAddCollaborator = () => {
+        if (!searchedUser) return;
 
-        if (foundUser && !collaborators.find(c => c.id === foundUser.id)) {
+        if (currentUserId && searchedUser.id === currentUserId) {
+            alert('Ви не можете додати себе як співавтора.');
+            return;
+        }
+
+        if (searchedUser && !collaborators.find(c => c.id === searchedUser.id)) {
             const newCollaborator: Collaborator = {
-                id: foundUser.id,
-                name: foundUser.name,
-                email: foundUser.email,
-                avatar: foundUser.avatarUrl,
+                id: searchedUser.id,
+                name: searchedUser.name,
+                email: searchedUser.email,
+                avatar: searchedUser.avatarUrl,
             };
             setCollaborators([...collaborators, newCollaborator]);
             setCollaboratorEmail('');
@@ -138,12 +170,14 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
         const email = collaboratorEmail.trim();
         if (email) {
             setIsSearching(true);
+            setSearchedUser(null);
             lookupUser(email);
         }
     };
+
     useEffect(() => {
-        if(!currentUserId){
-            //navigate("/")
+        if (!currentUserId) {
+            // navigate("/") - Розкоментуйте, якщо потрібен редирект
         }
         if (!isFetching) {
             setIsSearching(false);
@@ -154,7 +188,8 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                 setSearchedUser(null);
             }
         }
-    }, [isFetching, foundUser, isError, error]);
+    }, [isFetching, foundUser, isError, error, currentUserId]);
+
     const filteredSuggestions = React.useMemo(() => {
         const input = techInput.toLowerCase();
 
@@ -174,24 +209,31 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
         return sortedResults.slice(0, 5);
 
     }, [techInput, allTechnologies, selectedTechnologies]);
+
     let [
         createProject,
         { isLoading: isSubmitting, isError: submitError, isSuccess: submitSuccess, error: submitErrorData }
     ] = useCreateProjectMutation();
+
     const handleAddGithubLink = () => {
         setGithubLinks([...githubLinks, '']);
     };
+
     const handleDismissError = () => {
         setShowDismissableError(false);
     };
+
     useEffect(() => {
         if (submitError) {
             setShowDismissableError(true);
         }
     }, [submitError]);
+
     const handleRemoveGithubLink = (index: number) => {
         if (githubLinks.length > 1) {
-            setGithubLinks(githubLinks.filter((_, i) => i !== index));
+            const newLinks = githubLinks.filter((_, i) => i !== index);
+            setGithubLinks(newLinks);
+            validateLinks(newLinks, deploymentLink);
         }
     };
 
@@ -199,7 +241,48 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
         const newLinks = [...githubLinks];
         newLinks[index] = value;
         setGithubLinks(newLinks);
+        validateLinks(newLinks, deploymentLink);
     };
+
+    const handleDeploymentLinkChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setDeploymentLink(value);
+        validateLinks(githubLinks, value);
+    };
+
+    const validateLinks = (ghLinks: string[], demoLink: string) => {
+        let ghError: string | null = null;
+        const nonBlankGhLinks = ghLinks.filter(l => l.trim());
+
+        for (const link of nonBlankGhLinks) {
+            if (!isGitHubUrlValid(link)) {
+                ghError = 'Некоректне посилання на GitHub. Потрібен повний URL.';
+                break;
+            }
+        }
+
+        let demoError: string | null = null;
+        if (demoLink.trim() && !isValidUrl(demoLink)) {
+            demoError = 'Некоректний URL для опублікованого проекту.';
+        }
+
+        setLinkErrors({ github: ghError, demo: demoError });
+    };
+
+    const handleDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const value = e.target.value;
+        if (value.length <= DESCRIPTION_MAX_LENGTH) {
+            setDescription(value);
+        }
+    };
+
+
+    const handleProjectNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        if (value.length <= PROJECT_NAME_MAX_LENGTH) {
+            setProjectName(value);
+        }
+    }
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {
         const files = e.target.files;
@@ -251,6 +334,7 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
             setMediaFiles(prev =>
                 prev.map(f => {
                     if (f.id === clientId) {
+                        URL.revokeObjectURL(f.url);
                         return {
                             ...f,
                             isUploading: false,
@@ -264,6 +348,7 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
             );
         };
     }
+
     const handleSetMainImage = (id: string) => {
         setMediaFiles(mediaFiles.map(file => ({
             ...file,
@@ -272,9 +357,20 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
     };
 
     const handleRemoveMedia = (id: string) => {
+        const fileToRemove = mediaFiles.find(f => f.id === id);
+        if (fileToRemove && fileToRemove.url) {
+            URL.revokeObjectURL(fileToRemove.url);
+        }
+
         const updatedFiles = mediaFiles.filter(file => file.id !== id);
         if (updatedFiles.length > 0 && mediaFiles.find(f => f.id === id)?.isMain) {
-            updatedFiles[0].isMain = true;
+
+            const nextMainImage = updatedFiles.find(f => f.type === 'image');
+            if(nextMainImage) {
+                nextMainImage.isMain = true;
+            } else {
+                updatedFiles[0].isMain = true;
+            }
         }
         setMediaFiles(updatedFiles);
     };
@@ -285,6 +381,8 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
     };
 
     const handleNextStep = () => {
+        if (!canProceed()) return;
+
         const currentIndex = steps.findIndex(s => s.id === currentStep);
         if (currentIndex < steps.length - 1) {
             setCurrentStep(steps[currentIndex + 1].id);
@@ -320,31 +418,45 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
 
     const canProceed = () => {
         const allMediaUploaded = mediaFiles.every(f => f.uploadProgress === 100 && !f.uploadError);
+        const linkValidationPassed = !linkErrors.github && !linkErrors.demo;
+
+        const isProjectNameValid = projectName.length >= PROJECT_NAME_MIN_LENGTH && projectName.length <= PROJECT_NAME_MAX_LENGTH;
+        const isDescriptionValid = description.length >= DESCRIPTION_MIN_LENGTH && description.length <= DESCRIPTION_MAX_LENGTH;
+
+
         switch (currentStep) {
             case 'basics':
-                return projectName.trim() !== '';
+                return isProjectNameValid;
             case 'media':
-                return allMediaUploaded; // Optional
+
+                return allMediaUploaded;
             case 'links':
-                return true; // Optional
+                return linkValidationPassed;
             case 'details':
-                return description.trim() !== '';
+                return isDescriptionValid;
             case 'team':
-                return true; // Optional
+                return true;
+            case 'review':
+
+                return isProjectNameValid && isDescriptionValid && linkValidationPassed && allMediaUploaded;
             default:
                 return true;
         }
     };
 
     useEffect(() => {
-        if (submitSuccess && !isSubmitting) {
+        if (submitSuccess && !isSubmitting && newlyCreatedProjectId) {
             navigate(`/project/view/${newlyCreatedProjectId}`);
         }
-    }, [submitSuccess, isSubmitting, navigate, userId]);
+    }, [submitSuccess, isSubmitting, navigate, newlyCreatedProjectId]);
+
     const projectData = useMemo(() => {
         const uploadedMediaIds = mediaFiles
             .filter(f => f.serverId)
             .map(f => f.serverId!);
+
+        const previewImageId = mediaFiles.find(f => f.isMain && f.type === 'image' && f.serverId)?.serverId;
+
         return {
             userId: userId,
             title: projectName,
@@ -354,24 +466,50 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
             technologies: selectedTechnologies.map(tech => tech.id),
             mediaIds: uploadedMediaIds,
             subauthorIds: collaborators.map(c => c.id),
-            previewId: mediaFiles.find(f => f.isMain && f.serverId)?.serverId || null,
+            previewId: previewImageId || null, // Встановлюємо ID лише зображення
             visible: visibility === 'public' ? null : 'PRIVATE'
-
         };
     }, [
         userId, projectName, description, githubLinks, deploymentLink,
-        selectedTechnologies, mediaFiles
+        selectedTechnologies, mediaFiles, collaborators, visibility
     ]);
-    const handleSubmit = async () => {
-        try {
-            const result = await createProject(projectData).unwrap();
 
-            const newProjectId = result.data.id;
-            setNewlyCreatedProjectId(newProjectId);
+    const handleSubmit = async () => {
+        if (!canProceed()) {
+            alert("Будь ласка, перевірте, чи всі обов'язкові поля заповнені та валідація пройдена.");
+            return;
+        }
+        try {
+
+            const result = await createProject(projectData).unwrap();
+            let newProjectId: string | undefined;
+
+            if (result && typeof result === 'object') {
+                newProjectId = result.id;
+                if (!newProjectId && (result as any).data) {
+                    newProjectId = (result as any).data.id;
+                }
+            }
+
+            if (newProjectId) {
+                setNewlyCreatedProjectId(newProjectId);
+            } else {
+                console.error("Помилка: ID нового проєкту не знайдено у відповіді API", result);
+                alert("Проєкт створено, але не вдалося отримати ID для перенаправлення.");
+            }
+
         } catch (error) {
             console.error("Submission failed:", error);
         }
     };
+
+    const isCollaboratorTheAuthor = searchedUser && currentUserId && searchedUser.id === currentUserId;
+    const isProjectNameTooShort = projectName.length > 0 && projectName.length < PROJECT_NAME_MIN_LENGTH;
+    const isProjectNameTooLong = projectName.length > PROJECT_NAME_MAX_LENGTH;
+    const isDescriptionTooShort = description.length > 0 && description.length < DESCRIPTION_MIN_LENGTH;
+    const isDescriptionTooLong = description.length > DESCRIPTION_MAX_LENGTH;
+
+
     return (
         <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-cyan-500/10" />
@@ -474,7 +612,6 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                             </div>
                         </div>
 
-                        {/* Mobile Step Indicator */}
                         <div className="lg:hidden mb-6">
                             <div className="bg-card/50 backdrop-blur-2xl border border-border/50 rounded-2xl p-4">
                                 <div className="flex items-center gap-3 mb-3">
@@ -509,20 +646,20 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                             </div>
                         </div>
 
-                        {/* Step Content */}
+
                         <div className="bg-card/50 backdrop-blur-2xl border border-border/50 rounded-3xl p-8 shadow-2xl min-h-[600px] flex flex-col">
-                            {/* Відображення помилок та завантаження */}
+
                             {isSubmitting && <Loading fullScreen text="Публікація проекту..." />}
+
                             {(submitError || showDismissableError) && (
                                 <ErrorMessage
                                     fullScreen
                                     title="Помилка публікації"
                                     message={(submitErrorData as any)?.data?.message || "Не вдалося створити проект. Спробуйте пізніше."}
-
                                     onDismiss={handleDismissError}
                                     onRetry={() => {
                                         handleDismissError();
-                                        createProject(projectData);
+                                        handleSubmit();
                                     }}
                                 />
                             )}
@@ -545,11 +682,22 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                             <Input
                                                 id="projectName"
                                                 type="text"
-                                                placeholder="Моя крута ідея..."
+                                                placeholder={`Назва (від ${PROJECT_NAME_MIN_LENGTH} до ${PROJECT_NAME_MAX_LENGTH} символів)...`}
                                                 value={projectName}
-                                                onChange={(e) => setProjectName(e.target.value)}
-                                                className="rounded-2xl bg-secondary/50 backdrop-blur-sm border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                                onChange={handleProjectNameChange}
+                                                className={`rounded-2xl bg-secondary/50 backdrop-blur-sm focus:ring-2 focus:ring-primary/20 ${
+                                                    (isProjectNameTooShort || isProjectNameTooLong) ? 'border-destructive focus:border-destructive' : 'border-border/50 focus:border-primary'
+                                                }`}
                                             />
+                                            {(isProjectNameTooShort || isProjectNameTooLong) ? (
+                                                <p className="text-sm text-destructive">
+                                                    Назва має бути від {PROJECT_NAME_MIN_LENGTH} до {PROJECT_NAME_MAX_LENGTH} символів. Поточна довжина: {projectName.length}.
+                                                </p>
+                                            ) : (
+                                                <p className="text-sm text-muted-foreground">
+                                                    {projectName.length}/{PROJECT_NAME_MAX_LENGTH}
+                                                </p>
+                                            )}
                                         </div>
 
                                         <div className="space-y-3">
@@ -594,174 +742,174 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                         </div>
                                     </div>
                                 )}
-                                    {currentStep === 'media' && (
-                                        <div className="space-y-6 animate-in fade-in duration-500">
-                                            <div className="flex items-center gap-3 mb-6">
-                                                <div className="size-12 bg-gradient-to-br from-primary to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-primary/30">
-                                                    <ImageIcon className="size-6 text-white" />
-                                                </div>
-                                                <div>
-                                                    <h2>Медіа файли</h2>
-                                                    <p className="text-muted-foreground">Додайте фото та відео вашого проекту</p>
-                                                </div>
+                                {currentStep === 'media' && (
+                                    <div className="space-y-6 animate-in fade-in duration-500">
+                                        <div className="flex items-center gap-3 mb-6">
+                                            <div className="size-12 bg-gradient-to-br from-primary to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-primary/30">
+                                                <ImageIcon className="size-6 text-white" />
                                             </div>
-
-
-                                            <div className="flex flex-col sm:flex-row gap-3">
-                                                <Button
-                                                    type="button"
-                                                    variant="secondary"
-                                                    onClick={() => imageInputRef.current?.click()}
-                                                    className="flex w-full sm:w-auto justify-center gap-2"
-                                                >
-                                                    <Upload className="size-6" />
-                                                    Завантажити фото
-                                                </Button>
-
-                                                <input
-                                                    ref={imageInputRef}
-                                                    id="file-image"
-                                                    type="file"
-                                                    accept="image/*"
-                                                    className="hidden"
-                                                    onChange={(e) => handleFileChange(e, 'image')}
-                                                />
-
-                                                <Button
-                                                    type="button"
-                                                    variant="secondary"
-                                                    onClick={() => videoInputRef.current?.click()}
-                                                    className="flex w-full sm:w-auto justify-center gap-2"
-                                                >
-                                                    <Video className="size-6" />
-                                                    Завантажити відео
-                                                </Button>
-
-                                                <input
-                                                    ref={videoInputRef}
-                                                    id="file-video"
-                                                    type="file"
-                                                    accept="video/*"
-                                                    className="hidden"
-                                                    onChange={(e) => handleFileChange(e, 'video')}
-                                                />
+                                            <div>
+                                                <h2>Медіа файли</h2>
+                                                <p className="text-muted-foreground">Додайте фото та відео вашого проекту</p>
                                             </div>
+                                        </div>
 
-                                            {mediaFiles.length > 0 ? (
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                                                    {mediaFiles.map((file) => (
-                                                        <div
-                                                            key={file.id}
 
-                                                            className={`relative group rounded-2xl overflow-hidden border-2 transition-all cursor-pointer ${
-                                                                file.isMain ? 'border-primary shadow-lg shadow-primary/30' : 'border-border/50'
-                                                            } ${
-                                                                file.uploadError ? 'border-destructive' : 'bg-secondary/50'
-                                                            }`}
-                                                        >
+                                        <div className="flex flex-col sm:flex-row gap-3">
+                                            <Button
+                                                type="button"
+                                                variant="secondary"
+                                                onClick={() => imageInputRef.current?.click()}
+                                                className="flex w-full sm:w-auto justify-center gap-2"
+                                            >
+                                                <Upload className="size-6" />
+                                                Завантажити фото
+                                            </Button>
+
+                                            <input
+                                                ref={imageInputRef}
+                                                id="file-image"
+                                                type="file"
+                                                accept="image/*"
+                                                className="hidden"
+                                                onChange={(e) => handleFileChange(e, 'image')}
+                                            />
+
+                                            <Button
+                                                type="button"
+                                                variant="secondary"
+                                                onClick={() => videoInputRef.current?.click()}
+                                                className="flex w-full sm:w-auto justify-center gap-2"
+                                            >
+                                                <Video className="size-6" />
+                                                Завантажити відео
+                                            </Button>
+
+                                            <input
+                                                ref={videoInputRef}
+                                                id="file-video"
+                                                type="file"
+                                                accept="video/*"
+                                                className="hidden"
+                                                onChange={(e) => handleFileChange(e, 'video')}
+                                            />
+                                        </div>
+
+                                        {mediaFiles.length > 0 ? (
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                                                {mediaFiles.map((file) => (
+                                                    <div
+                                                        key={file.id}
+
+                                                        className={`relative group rounded-2xl overflow-hidden border-2 transition-all cursor-pointer ${
+                                                            file.isMain ? 'border-primary shadow-lg shadow-primary/30' : 'border-border/50'
+                                                        } ${
+                                                            file.uploadError ? 'border-destructive' : 'bg-secondary/50'
+                                                        }`}
+                                                    >
+                                                        <div className="aspect-video">
                                                             <div className="aspect-video">
-                                                                <div className="aspect-video">
-                                                                    {file.type === 'image' && file.url && (
+                                                                {file.type === 'image' && file.url && (
 
-                                                                        <img
-                                                                            src={file.url}
-                                                                            alt={file.name || "Project media"}
-                                                                            className="w-full h-full object-cover"
-                                                                        />
+                                                                    <img
+                                                                        src={file.url}
+                                                                        alt={file.name || "Project media"}
+                                                                        className="w-full h-full object-cover"
+                                                                    />
 
-                                                                    )}
-                                                                    {file.type === 'video' && file.url && (
+                                                                )}
+                                                                {file.type === 'video' && file.url && (
 
-                                                                        <video
-                                                                            src={file.url}
-                                                                            controls
-                                                                            className="w-full h-full object-cover"
-                                                                        >
-                                                                            Ваш браузер не підтримує тег video.
-                                                                        </video>
-                                                                    )}
+                                                                    <video
+                                                                        src={file.url}
+                                                                        controls
+                                                                        className="w-full h-full object-cover"
+                                                                    >
+                                                                        Ваш браузер не підтримує тег video.
+                                                                    </video>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        {file.isUploading && file.uploadProgress < 100 && (
+                                                            <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+                                                                <div className="p-4 w-4/5">
+                                                                    <p className="text-xs text-white mb-1">Завантаження... {file.uploadProgress}%</p>
+                                                                    <Progress value={file.uploadProgress} className="h-1 bg-white/20" />
                                                                 </div>
                                                             </div>
+                                                        )}
 
-                                                            {file.isUploading && file.uploadProgress < 100 && (
-                                                                <div className="absolute inset-0 flex items-center justify-center bg-black/80">
-                                                                    <div className="p-4 w-4/5">
-                                                                        <p className="text-xs text-white mb-1">Завантаження... {file.uploadProgress}%</p>
-                                                                        <Progress value={file.uploadProgress} className="h-1 bg-white/20" />
-                                                                    </div>
-                                                                </div>
-                                                            )}
-
-                                                            {file.uploadError && (
-                                                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-destructive/80 p-2">
-                                                                    <p className="text-sm text-white text-center mb-2">Помилка завантаження.</p>
-                                                                    <Button
-                                                                        type="button"
-                                                                        onClick={() => handleRemoveMedia(file.id)}
-                                                                        variant="danger"
-                                                                        className="bg-white/20 hover:bg-white/30 text-white rounded-full p-2 h-auto"
-                                                                    >
-                                                                        <X className="size-4" /> Видалити
-                                                                    </Button>
-                                                                </div>
-                                                            )}
+                                                        {file.uploadError && (
+                                                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-destructive/80 p-2">
+                                                                <p className="text-sm text-white text-center mb-2">Помилка завантаження.</p>
+                                                                <Button
+                                                                    type="button"
+                                                                    onClick={() => handleRemoveMedia(file.id)}
+                                                                    variant="danger"
+                                                                    className="bg-white/20 hover:bg-white/30 text-white rounded-full p-2 h-auto"
+                                                                >
+                                                                    <X className="size-4" /> Видалити
+                                                                </Button>
+                                                            </div>
+                                                        )}
 
 
-                                                            {file.uploadProgress === 100 && !file.uploadError && (
-                                                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2
+                                                        {file.uploadProgress === 100 && !file.uploadError && (
+                                                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2
                                             sm:opacity-0 md:opacity-0 lg:opacity-0 ">
 
-                                                                </div>
-                                                            )}
+                                                            </div>
+                                                        )}
 
 
-                                                            {file.uploadProgress === 100 && !file.uploadError && (
-                                                                <>
+                                                        {file.uploadProgress === 100 && !file.uploadError && (
+                                                            <>
+
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="danger"
+                                                                    onClick={() => handleRemoveMedia(file.id)}
+                                                                    className="absolute top-2 left-2 z-10 rounded-full p-1.5 bg-black/50 hover:bg-destructive/70 transition-all shadow-lg"
+                                                                >
+                                                                    <X className="size-3" />
+                                                                </Button>
+
+                                                                {!file.isMain && file.type === 'image' && (
 
                                                                     <Button
-                                                                        type="button"
-                                                                        variant="danger"
-                                                                        onClick={() => handleRemoveMedia(file.id)}
-                                                                        className="absolute top-2 left-2 z-10 rounded-full p-1.5 bg-black/50 hover:bg-destructive/70 transition-all shadow-lg"
+                                                                        onClick={() => handleSetMainImage(file.id)}
+                                                                        className="absolute top-2 right-2 z-10 rounded-full h-4 p-1.5 bg-black/50 hover:bg-primary transition-all shadow-lg"
                                                                     >
-                                                                        <X className="size-3" />
+                                                                        <Star className="size-3" />
                                                                     </Button>
+                                                                )}
 
-                                                                    {!file.isMain && file.type === 'image' && (
 
-                                                                        <Button
-                                                                            onClick={() => handleSetMainImage(file.id)}
-                                                                            className="absolute top-2 right-2 z-10 rounded-full h-4 p-1.5 bg-black/50 hover:bg-primary transition-all shadow-lg"
-                                                                        >
+                                                                {file.isMain && (
+                                                                    <div className="absolute top-2 right-2 z-10">
+                                                                        <Badge className="bg-primary/90 backdrop-blur-sm gap-1">
                                                                             <Star className="size-3" />
-                                                                        </Button>
-                                                                    )}
-
-
-                                                                    {file.isMain && (
-                                                                        <div className="absolute top-2 right-2 z-10">
-                                                                            <Badge className="bg-primary/90 backdrop-blur-sm gap-1">
-                                                                                <Star className="size-3" />
-                                                                                Головне
-                                                                            </Badge>
-                                                                        </div>
-                                                                    )}
-                                                                </>
-                                                            )}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <div className="border-2 border-dashed border-border/50 rounded-2xl p-12 text-center">
-                                                    <ImageIcon className="size-12 text-muted-foreground mx-auto mb-3" />
-                                                    <p className="text-muted-foreground mb-2">Медіа файли не додані</p>
-                                                    <p className="text-sm text-muted-foreground">
-                                                        Додайте фото або відео, щоб показати ваш проект
-                                                    </p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
+                                                                            Головне
+                                                                        </Badge>
+                                                                    </div>
+                                                                )}
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="border-2 border-dashed border-border/50 rounded-2xl p-12 text-center">
+                                                <ImageIcon className="size-12 text-muted-foreground mx-auto mb-3" />
+                                                <p className="text-muted-foreground mb-2">Медіа файли не додані</p>
+                                                <p className="text-sm text-muted-foreground">
+                                                    Додайте фото або відео, щоб показати ваш проект
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
 
                                 {currentStep === 'links' && (
                                     <div className="space-y-6 animate-in fade-in duration-500">
@@ -784,7 +932,9 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                         placeholder="https://github.com/username/repo"
                                                         value={link}
                                                         onChange={(e) => handleGithubLinkChange(index, e.target.value)}
-                                                        className="rounded-2xl bg-secondary/50 backdrop-blur-sm border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                                        className={`rounded-2xl bg-secondary/50 backdrop-blur-sm focus:ring-2 focus:ring-primary/20 ${
+                                                            linkErrors.github && link.trim() ? 'border-destructive focus:border-destructive' : 'border-border/50 focus:border-primary'
+                                                        }`}
                                                     />
                                                     {githubLinks.length > 1 && (
                                                         <Button
@@ -799,11 +949,14 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                     )}
                                                 </div>
                                             ))}
+                                            {linkErrors.github && (
+                                                <p className="text-sm text-destructive">{linkErrors.github}</p>
+                                            )}
                                             <Button
                                                 type="button"
                                                 variant="ghost"
                                                 onClick={handleAddGithubLink}
-                                                className="flex w-full sm:w-auto justify-center gap-2 hover:scale-0"
+                                                className="flex w-full sm:w-auto justify-center gap-2 hover:scale-105 transition-transform"
                                             >
                                                 <Plus className="size-6" />
                                                 Додати репозиторій
@@ -822,9 +975,14 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                 type="url"
                                                 placeholder="https://my-project.vercel.app"
                                                 value={deploymentLink}
-                                                onChange={(e) => setDeploymentLink(e.target.value)}
-                                                className="rounded-2xl bg-secondary/50 backdrop-blur-sm border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                                onChange={handleDeploymentLinkChange}
+                                                className={`rounded-2xl bg-secondary/50 backdrop-blur-sm focus:ring-2 focus:ring-primary/20 ${
+                                                    linkErrors.demo && deploymentLink.trim() ? 'border-destructive focus:border-destructive' : 'border-border/50 focus:border-primary'
+                                                }`}
                                             />
+                                            {linkErrors.demo && (
+                                                <p className="text-sm text-destructive">{linkErrors.demo}</p>
+                                            )}
                                         </div>
                                     </div>
                                 )}
@@ -843,7 +1001,7 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
 
                                         <div className="space-y-3">
                                             <Label htmlFor="techInput">Технології</Label>
-                                            <div className="flex gap-2">
+                                            <div className="flex gap-2 relative">
                                                 <Input
                                                     id="techInput"
                                                     type="text"
@@ -856,7 +1014,7 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                     disabled={isTechLoading}
                                                 />
                                                 {showSuggestions && techInput.trim() && filteredSuggestions.length > 0 && (
-                                                    <div className="absolute z-20 w-full mt-8 bg-card border border-border/50 rounded-xl shadow-xl max-h-60 overflow-y-auto">
+                                                    <div className="absolute z-20 w-full mt-14 bg-card border border-border/50 rounded-xl shadow-xl max-h-60 overflow-y-auto">
                                                         {filteredSuggestions.map((tech) => (
                                                             <button
                                                                 key={tech.id}
@@ -889,25 +1047,6 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                     ))}
                                                 </div>
                                             )}
-                                            {technologies.length > 0 && (
-                                                <div className="flex flex-wrap gap-2 mt-3">
-                                                    {technologies.map((tech) => (
-                                                        <Badge
-                                                            key={tech}
-                                                            className="bg-gradient-to-r from-primary/20 to-purple-600/20 border border-primary/30 backdrop-blur-sm pl-3 pr-2 py-1.5 gap-2"
-                                                        >
-                                                            {tech}
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleRemoveTechnology(tech)}
-                                                                className="hover:text-destructive transition-colors"
-                                                            >
-                                                                <X className="size-3" />
-                                                            </button>
-                                                        </Badge>
-                                                    ))}
-                                                </div>
-                                            )}
                                         </div>
 
                                         <div className="space-y-3">
@@ -917,9 +1056,9 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                     type="button"
                                                     variant="ghost"
                                                     onClick={() => setShowMarkdownPreview(!showMarkdownPreview)}
-                                                    className="flex gap-8 hover:scale-10"
+                                                    className="flex items-center gap-1 text-primary hover:text-primary/80"
                                                 >
-                                                    <Eye className="size-6" />
+                                                    <Eye className="size-4" />
                                                     {showMarkdownPreview ? 'Редагувати' : 'Переглянути'}
                                                 </Button>
                                             </div>
@@ -927,10 +1066,12 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                             {!showMarkdownPreview ? (
                                                 <Textarea
                                                     id="description"
-                                                    placeholder="# Мій проект&#10;&#10;Опис того, що робить проект...&#10;&#10;## Особливості&#10;- Особливість 1&#10;- Особливість 2&#10;&#10;**Підтримка Markdown**"
+                                                    placeholder={`Опис (від ${DESCRIPTION_MIN_LENGTH} до ${DESCRIPTION_MAX_LENGTH} символів)...`}
                                                     value={description}
-                                                    onChange={(e) => setDescription(e.target.value)}
-                                                    className="min-h-[300px] rounded-2xl bg-secondary/50 backdrop-blur-sm border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20 font-mono"
+                                                    onChange={handleDescriptionChange}
+                                                    className={`min-h-[300px] rounded-2xl bg-secondary/50 backdrop-blur-sm focus:ring-2 focus:ring-primary/20 font-mono ${
+                                                        (isDescriptionTooShort || isDescriptionTooLong) ? 'border-destructive focus:border-destructive' : 'border-border/50 focus:border-primary'
+                                                    }`}
                                                 />
                                             ) : (
                                                 <div
@@ -939,9 +1080,20 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                 />
                                             )}
 
-                                            <p className="text-sm text-muted-foreground">
-                                                Підтримує Markdown: # заголовок, **жирний**, *курсив*, `код`
-                                            </p>
+                                            <div className="flex justify-between items-center text-sm">
+                                                <p className="text-muted-foreground">
+                                                    Підтримує Markdown: # заголовок, **жирний**, *курсив*, `код`
+                                                </p>
+                                                <p className={(isDescriptionTooShort || isDescriptionTooLong) ? 'text-destructive' : 'text-muted-foreground'}>
+                                                    {description.length}/{DESCRIPTION_MAX_LENGTH}
+                                                </p>
+                                            </div>
+                                            {isDescriptionTooShort && (
+                                                <p className="text-sm text-destructive">Опис занадто короткий. Мінімум {DESCRIPTION_MIN_LENGTH} символів.</p>
+                                            )}
+                                            {isDescriptionTooLong && (
+                                                <p className="text-sm text-destructive">Опис занадто довгий. Максимум {DESCRIPTION_MAX_LENGTH} символів.</p>
+                                            )}
                                         </div>
                                     </div>
                                 )}
@@ -971,7 +1123,7 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                         value={collaboratorEmail}
                                                         onChange={(e) => setCollaboratorEmail(e.target.value)}
                                                         onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleSearchUser())}
-                                                        className="rounded-2xl bg-secondary/50 backdrop-blur-sm border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20 pl-10 h-12" // Додано h-12
+                                                        className="rounded-2xl bg-secondary/50 backdrop-blur-sm border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20 pl-10 h-12"
                                                         disabled={isSearching}
                                                     />
                                                 </div>
@@ -981,9 +1133,9 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                     onClick={handleSearchUser}
                                                     disabled={isSearching || !collaboratorEmail.trim()}
 
-                                                    className="flex w-full sm:w-auto justify-center rounded-xl hover:scale-110 bg-primary/90 hover:bg-primary gap-2 h-12"
+                                                    className="flex w-full sm:w-auto justify-center rounded-xl hover:scale-105 bg-primary/90 hover:bg-primary gap-2 h-12"
                                                 >
-                                                    {isSearching ? <Loading /> : <UserPlus className="size-6" />}
+                                                    {isSearching ? <Loading className="size-6"/> : <UserPlus className="size-6" />}
                                                     {isSearching ? 'Пошук...' : 'Знайти'}
                                                 </Button>
                                             </div>
@@ -1004,16 +1156,19 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                         </div>
                                                         <Button
                                                             type="button"
-                                                            onClick={handleAddCollaborator} // Додаємо знайденого
-                                                            disabled={collaborators.some(c => c.id === searchedUser.id)}
+                                                            onClick={handleAddCollaborator}
+                                                            disabled={collaborators.some(c => c.id === searchedUser.id) || isCollaboratorTheAuthor}
                                                             className="rounded-xl bg-primary/90 hover:bg-primary flex-shrink-0"
                                                         >
-                                                            {collaborators.some(c => c.id === searchedUser.id) ? 'Додано' : 'Додати'}
+                                                            {collaborators.some(c => c.id === searchedUser.id) ? 'Додано' : isCollaboratorTheAuthor ? 'Ви є автором' : 'Додати'}
                                                         </Button>
                                                     </div>
                                                 ) : isError ? (
                                                     <p className="text-sm text-destructive">Користувач не знайдений або помилка сервера.</p>
                                                 ) : null}
+                                                {isCollaboratorTheAuthor && (
+                                                    <p className="text-sm text-destructive mt-2">Ви є автором цього проекту, тому не можете бути співавтором.</p>
+                                                )}
                                             </div>
                                         </div>
 
@@ -1086,7 +1241,9 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                         Редагувати
                                                     </Button>
                                                 </div>
-                                                <p className="mb-2">{projectName || 'Не вказано'}</p>
+                                                <p className={`mb-2 ${isProjectNameTooShort || isProjectNameTooLong ? 'text-destructive font-bold' : ''}`}>
+                                                    {projectName || 'Не вказано'}
+                                                </p>
                                                 <div className="flex items-center gap-2">
                                                     {visibility === 'public' ? (
                                                         <>
@@ -1117,7 +1274,7 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                     </div>
                                                     <div className="flex gap-2">
                                                         {mediaFiles.slice(0, 4).map((file) => (
-                                                            <div key={file.id} className="size-16 rounded-xl overflow-hidden bg-secondary border border-border/50">
+                                                            <div key={file.id} className={`size-16 rounded-xl overflow-hidden bg-secondary border border-border/50 ${file.isMain && file.type === 'image' ? 'border-primary border-2' : ''}`}>
                                                                 {file.type === 'image' ? (
                                                                     <img
                                                                         src={file.url}
@@ -1132,15 +1289,15 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                             </div>
                                                         ))}
                                                         {mediaFiles.length > 4 && (
-                                                            <div className="size-16 rounded-xl bg-secondary border border-border/50 flex items-center justify-center">
-                                                                <span className="text-sm text-muted-foreground">+{mediaFiles.length - 4}</span>
+                                                            <div className="size-16 rounded-xl bg-secondary border-2 border-background flex items-center justify-center">
+                                                                <span className="text-xs text-muted-foreground">+{mediaFiles.length - 4}</span>
                                                             </div>
                                                         )}
                                                     </div>
                                                 </div>
                                             )}
 
-                                            {technologies.length > 0 && (
+                                            {selectedTechnologies.length > 0 && (
                                                 <div className="p-4 bg-secondary/30 rounded-2xl border border-border/50">
                                                     <div className="flex items-center justify-between mb-3">
                                                         <Label className="text-muted-foreground">Технології</Label>
@@ -1154,9 +1311,9 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                         </Button>
                                                     </div>
                                                     <div className="flex flex-wrap gap-2">
-                                                        {technologies.map((tech) => (
-                                                            <Badge key={tech} className="bg-primary/10 text-primary border-primary/30">
-                                                                {tech}
+                                                        {selectedTechnologies.map((tech) => (
+                                                            <Badge key={tech.id} className="bg-primary/10 text-primary border-primary/30">
+                                                                {tech.name}
                                                             </Badge>
                                                         ))}
                                                     </div>
@@ -1209,16 +1366,21 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                     </div>
                                                     <div className="space-y-2 text-sm">
                                                         {githubLinks.filter(l => l.trim()).map((link, i) => (
-                                                            <div key={i} className="flex items-center gap-2 text-muted-foreground">
+                                                            <div key={i} className={`flex items-center gap-2 ${isGitHubUrlValid(link) ? 'text-muted-foreground' : 'text-destructive font-bold'}`}>
                                                                 <Github className="size-4" />
                                                                 <span className="truncate">{link}</span>
                                                             </div>
                                                         ))}
                                                         {deploymentLink && (
-                                                            <div className="flex items-center gap-2 text-muted-foreground">
+                                                            <div className="flex items-center gap-2 ${isValidUrl(deploymentLink) ? 'text-muted-foreground' : 'text-destructive font-bold'}">
                                                                 <LinkIcon className="size-4" />
                                                                 <span className="truncate">{deploymentLink}</span>
                                                             </div>
+                                                        )}
+                                                        {(!linkValidationPassed) && (
+                                                            <p className="text-sm text-destructive font-bold pt-1">
+                                                                Є некоректні посилання. Будь ласка, виправте.
+                                                            </p>
                                                         )}
                                                     </div>
                                                 </div>
@@ -1244,7 +1406,7 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                     <Button
                                         type="button"
                                         onClick={handleSubmit}
-                                        disabled={!canProceed()}
+                                        disabled={!canProceed() || isSubmitting}
                                         className="rounded-xl w-full sm:w-auto bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 shadow-xl shadow-primary/30 gap-2"
                                     >
                                         <Rocket className="size-4" />
