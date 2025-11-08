@@ -4,10 +4,10 @@ import { useEditProject, type MediaFile } from '../../hooks/useEditProjectContex
 import Button from '../../../../components/Button';
 import { Progress } from '../../../../components/Progress';
 import { Badge } from '../../../../components/badge';
-import { ImageIcon, Star, Upload, Video, X } from 'lucide-react';
+import { ImageIcon, Star, Upload, Video, X, Check } from 'lucide-react'; // Added Check for completeness
 import type { RootState } from '../../../../store';
 import { uploadMediaToServer } from '../../services/mediaUploadService';
-import Loading from '../../../../components/Loading'; // <-- 1. ДОДАЙТЕ ЦЕЙ ІМПОРТ
+import Loading from '../../../../components/Loading';
 
 export const SectionMedia = () => {
     const { mediaFiles, setMediaFiles } = useEditProject();
@@ -16,7 +16,6 @@ export const SectionMedia = () => {
     const imageInputRef = useRef<HTMLInputElement>(null);
     const videoInputRef = useRef<HTMLInputElement>(null);
 
-    // ... (Функції updateProgress, handleFileChange, handleSetMainImage, handleRemoveMedia - БЕЗ ЗМІН) ...
     const updateProgress = (fileId: string, progress: number) => {
         setMediaFiles(prev => prev.map(f => f.id === fileId ? { ...f, uploadProgress: progress, uploadError: false } : f));
     };
@@ -25,18 +24,23 @@ export const SectionMedia = () => {
         const files = e.target.files;
         if (!files) return;
 
-        let isFirstFile = mediaFiles.length === 0 && !mediaFiles.some(f => f.isMain);
+        // Визначаємо, чи потрібно робити цей файл головним
+        // Перевіряємо, чи немає головного файлу серед уже завантажених (uploadProgress === 100)
+        let isFirstFile = !mediaFiles.some(f => f.isMain && f.uploadProgress === 100);
 
         for (const file of Array.from(files)) {
             const tempId = `temp-${Date.now()}-${file.name}`;
             const localUrl = URL.createObjectURL(file);
 
             const newFilePlaceholder: MediaFile = {
-                id: tempId, url: localUrl, type, name: file.name, isMain: isFirstFile,
+                id: tempId, url: localUrl, type, name: file.name,
+                // Робимо його головним, якщо це перше зображення І це тип 'image',
+                // або якщо інших файлів немає взагалі
+                isMain: isFirstFile && type === 'image', // Надаємо пріоритет зображенням для main
                 serverId: undefined, uploadProgress: 0, isUploading: true, uploadError: false,
             };
             setMediaFiles(prev => [...prev, newFilePlaceholder]);
-            isFirstFile = false;
+            isFirstFile = false; // Наступні файли вже не будуть першими
 
             try {
                 if (!token) {
@@ -49,6 +53,10 @@ export const SectionMedia = () => {
                         updateProgress(tempId, progress);
                     }
                 );
+
+                // Звільняємо тимчасовий URL, оскільки тепер є постійний
+                URL.revokeObjectURL(localUrl);
+
                 setMediaFiles(prev => prev.map(f =>
                     f.id === tempId ? {
                         ...f,
@@ -57,15 +65,24 @@ export const SectionMedia = () => {
                         url: response.url,
                         isUploading: false,
                         uploadProgress: 100,
+                        // Якщо цей файл був призначений як isMain, зберігаємо це
+                        isMain: isFirstFile || (f.isMain && f.id === tempId)
                     } : f
                 ));
             } catch (err) {
                 console.error("Помилка завантаження файлу:", err);
-                setMediaFiles(prev => prev.map(f =>
-                    f.id === tempId ? { ...f, isUploading: false, uploadError: true, uploadProgress: 0 } : f
-                ));
+                // Оновлюємо стан на помилку
+                setMediaFiles(prev => prev.map(f => {
+                    if (f.id === tempId) {
+                        URL.revokeObjectURL(localUrl); // Звільняємо URL при помилці
+                        return { ...f, isUploading: false, uploadError: true, uploadProgress: 0 };
+                    }
+                    return f;
+                }));
             }
         }
+        // Очищаємо поле вводу
+        e.target.value = '';
     };
 
     const handleSetMainImage = (id: string) => {
@@ -74,44 +91,76 @@ export const SectionMedia = () => {
 
     const handleRemoveMedia = (id: string) => {
         const fileToRemove = mediaFiles.find(f => f.id === id);
+        if (fileToRemove && fileToRemove.url.startsWith('blob:')) {
+            URL.revokeObjectURL(fileToRemove.url);
+        }
+
         const updatedFiles = mediaFiles.filter(file => file.id !== id);
-        if (updatedFiles.length > 0 && fileToRemove?.isMain && !updatedFiles.some(f => f.isMain)) {
-            updatedFiles[0].isMain = true;
+
+        // Логіка перепризначення головного файлу
+        if (fileToRemove?.isMain && updatedFiles.length > 0) {
+            // Шукаємо перше зображення, щоб зробити його головним
+            const nextMainImage = updatedFiles.find(f => f.type === 'image' && !f.uploadError);
+            if (nextMainImage) {
+                // Використовуємо setMediaFiles для коректного оновлення стану
+                setMediaFiles(updatedFiles.map(f => f.id === nextMainImage.id ? { ...f, isMain: true } : f));
+                return;
+            } else if (updatedFiles.length > 0) {
+                // Якщо зображень немає, робимо головним перший доступний файл (відео або просто заглушку)
+                setMediaFiles(updatedFiles.map((f, i) => i === 0 ? { ...f, isMain: true } : f));
+                return;
+            }
         }
         setMediaFiles(updatedFiles);
     };
 
     return (
         <div className="pt-4 space-y-6">
-            {/* ... (Кнопки завантаження - БЕЗ ЗМІН) ... */}
-            <div className="flex gap-3">
-                <Button type="button" variant="ghost" onClick={() => imageInputRef.current?.click()} className="flex-1 rounded-2xl bg-secondary/50 border-border/50 hover:bg-secondary/70 hover:border-primary/50 gap-2 h-12">
+
+            {/* КНОПКИ ЗАВАНТАЖЕННЯ (Адаптовані) */}
+            <div className="flex flex-col sm:flex-row gap-3">
+                <Button type="button" variant="secondary" onClick={() => imageInputRef.current?.click()} className="flex-1 rounded-xl gap-2 h-12 bg-secondary/50 border-border/50 hover:bg-secondary/70 hover:border-primary/50">
                     <Upload className="size-4" /> Завантажити фото
                 </Button>
                 <input ref={imageInputRef} id="file-image" type="file" accept="image/*" multiple className="hidden" onChange={(e) => handleFileChange(e, 'image')} />
-                <Button type="button" variant="ghost" onClick={() => videoInputRef.current?.click()} className="flex-1 rounded-2xl bg-secondary/50 border-border/50 hover:bg-secondary/70 hover:border-primary/50 gap-2 h-12">
+
+                <Button type="button" variant="secondary" onClick={() => videoInputRef.current?.click()} className="flex-1 rounded-xl gap-2 h-12 bg-secondary/50 border-border/50 hover:bg-secondary/70 hover:border-primary/50">
                     <Video className="size-4" /> Завантажити відео
                 </Button>
                 <input ref={videoInputRef} id="file-video" type="file" accept="video/*" multiple className="hidden" onChange={(e) => handleFileChange(e, 'video')} />
             </div>
 
-            {/* --- 2. ОНОВІТЬ ЦЕЙ БЛОК ВЕРСТКИ --- */}
+            {/* ГАЛЕРЕЯ МЕДІА (Адаптивна) */}
             {mediaFiles.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3"> {/* Збільшено адаптивність */}
                     {mediaFiles.map((file) => (
-                        <div key={file.id} className={`relative group rounded-2xl overflow-hidden border-2 transition-all ${file.isMain ? 'border-primary shadow-lg shadow-primary/30' : 'border-border/50'} ${file.uploadError ? 'border-destructive' : 'bg-secondary/50'}`}>
+                        <div
+                            key={file.id}
+                            className={`relative group rounded-2xl overflow-hidden border-2 aspect-video transition-all ${
+                                file.isMain && !file.uploadError ? 'border-primary shadow-lg shadow-primary/30' : 'border-border/50'
+                            } ${
+                                file.uploadError ? 'bg-destructive/10' : 'bg-secondary/50'
+                            }`}
+                        >
 
                             {/* Медіа (img/video) */}
-                            <div className="aspect-video">
-                                {file.type === 'image' ? <img src={file.url} alt={file.name} className="w-full h-full object-cover" /> : <video src={file.url} title={file.name} className="w-full h-full object-cover bg-black" controls muted playsInline />}
+                            <div className="w-full h-full">
+                                {file.type === 'image' ? (
+                                    <img src={file.url} alt={file.name} className="w-full h-full object-cover" />
+                                ) : (
+                                    <video src={file.url} title={file.name} className="w-full h-full object-cover bg-black" controls={!file.isUploading && !file.uploadError} muted playsInline />
+                                )}
                             </div>
 
-                            {/* --- ОНОВЛЕНА ЛОГІКА ОВЕРЛЕЇВ --- */}
+                            {/* --- ОВЕРЛЕЇ: Завантаження та Помилка --- */}
 
-                            {/* Помилка (має вищий пріоритет) */}
+                            {/* Помилка (найвищий пріоритет) */}
                             {file.uploadError && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-destructive/80 p-2">
-                                    <p className="text-xs text-white text-center">Помилка завантаження.</p>
+                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-destructive/80 p-2 text-white">
+                                    <p className="text-sm text-center mb-2">Помилка завантаження</p>
+                                    <Button type="button" onClick={() => handleRemoveMedia(file.id)} variant="danger" className="bg-white/20 hover:bg-white/30 text-white rounded-xl h-auto p-2">
+                                        <X className="size-4 mr-1" /> Видалити
+                                    </Button>
                                 </div>
                             )}
 
@@ -119,43 +168,56 @@ export const SectionMedia = () => {
                             {file.isUploading && !file.uploadError && (
                                 <div className="absolute inset-0 flex items-center justify-center bg-black/80">
                                     {file.uploadProgress < 100 ? (
-                                        // 1. Показуємо прогрес-бар (0-99%)
+                                        // 1. Прогрес-бар (0-99%)
                                         <div className="p-4 w-4/5">
                                             <p className="text-xs text-white mb-1">Завантаження... {Math.round(file.uploadProgress)}%</p>
                                             <Progress value={file.uploadProgress} className="h-1 bg-white/20" />
                                         </div>
                                     ) : (
                                         // 2. 100% завантажено, чекаємо на відповідь сервера
-                                        <div className="p-4 w-4/5 text-center">
-                                            <Loading />
-                                            <p className="text-xs text-white mt-2">Обробка...</p>
+                                        <div className="p-4 w-4/5 text-center text-white">
+                                            <Loading className="size-6 animate-spin mx-auto" />
+                                            <p className="text-xs mt-2">Обробка...</p>
                                         </div>
                                     )}
                                 </div>
                             )}
 
-                            {/* Кнопки (тільки при успішному завершенні) */}
+                            {/* --- КОНТРОЛИ (Успішно завантажено, немає помилок) --- */}
+                            {/* Відображаються завжди, якщо не йде завантаження/помилка */}
                             {!file.isUploading && !file.uploadError && (
-                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                    {!file.isMain && file.type === 'image' && (
-                                        <Button type="button" onClick={() => handleSetMainImage(file.id)} className="rounded-xl bg-primary/90 hover:bg-primary gap-1">
-                                            <Star className="size-3" /> Головне
-                                        </Button>
-                                    )}
-                                    <Button type="button" variant="ghost" onClick={() => handleRemoveMedia(file.id)} className="rounded-xl">
+                                <>
+                                    {/* Кнопка "Видалити" (Верхній лівий кут) */}
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        onClick={() => handleRemoveMedia(file.id)}
+                                        className="absolute top-2 left-2 z-10 rounded-full p-2 h-auto bg-black/50 hover:bg-destructive/70 transition-all shadow-lg text-white"
+                                    >
                                         <X className="size-3" />
                                     </Button>
-                                </div>
-                            )}
-                            {/* ------------------------------------- */}
 
-                            {/* Бедж "Головне" */}
-                            {file.isMain && (
-                                <div className="absolute top-2 right-2">
-                                    <Badge className="bg-primary/90 backdrop-blur-sm gap-1">
-                                        <Star className="size-3" /> Головне
-                                    </Badge>
-                                </div>
+                                    {/* Бедж "Головне" (Верхній правий кут) */}
+                                    {file.isMain ? (
+                                        <div className="absolute top-2 right-2 z-10">
+                                            <Badge className="bg-primary/90 backdrop-blur-sm gap-1">
+                                                <Star className="size-3" /> Головне
+                                            </Badge>
+                                        </div>
+                                    ) : (
+                                        /* Кнопка "Зробити головним" (Тільки для зображень) */
+                                        file.type === 'image' && (
+                                            <Button
+                                                type="button"
+                                                onClick={() => handleSetMainImage(file.id)}
+                                                className="absolute top-2 right-2 z-10 rounded-full h-4 p-1.5 bg-black/50 hover:bg-primary transition-all shadow-lg"
+                                                title="Зробити головним зображенням"
+                                            >
+                                                <Star className="size-3" />
+                                            </Button>
+                                        )
+                                    )}
+                                </>
                             )}
                         </div>
                     ))}

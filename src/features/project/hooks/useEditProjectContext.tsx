@@ -14,30 +14,51 @@ export interface ProjectUpdateData {
     mediaIds: string[];
     subauthorIds: string[];
     previewId: string | null;
-    visible: 'PUBLIC' | 'PRIVATE';
     collaborators: Collaborator[]; // Це тільки для прев'ю
 }
+export interface LinkErrors { github: string | null; demo: string | null; }
+
+// --- Утилітарні функції валідації (Перенесені сюди для централізації) ---
+const isValidUrl = (url: string) => {
+    if (!url) return true;
+    try {
+        new URL(url);
+        return true;
+    } catch (e) {
+        return false;
+    }
+};
+const GITHUB_REGEX = /^https?:\/\/(www\.)?github\.com\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_.-]+(\/.*)?$/i;
+const isGitHubUrlValid = (url: string) => {
+    if (!url) return true;
+    return GITHUB_REGEX.test(url);
+};
 
 // --- Тип для нашого Context ---
 interface EditProjectContextType {
     // Стан
     projectName: string;
-    visibility: 'public' | 'private';
+    visibility: 'public' | 'private' | 'link';
     githubLinks: string[];
     deploymentLink: string;
     description: string;
     selectedTechnologies: SelectedTechnology[];
     mediaFiles: MediaFile[];
     collaborators: Collaborator[];
+    privateLinkToken: string | null;
     // Сеттери
     setProjectName: React.Dispatch<React.SetStateAction<string>>;
-    setVisibility: React.Dispatch<React.SetStateAction<'public' | 'private'>>;
+    setVisibility: React.Dispatch<React.SetStateAction<'public' | 'private' | 'link'>>;
     setGithubLinks: React.Dispatch<React.SetStateAction<string[]>>;
     setDeploymentLink: React.Dispatch<React.SetStateAction<string>>;
     setDescription: React.Dispatch<React.SetStateAction<string>>;
     setSelectedTechnologies: React.Dispatch<React.SetStateAction<SelectedTechnology[]>>;
     setMediaFiles: React.Dispatch<React.SetStateAction<MediaFile[]>>;
     setCollaborators: React.Dispatch<React.SetStateAction<Collaborator[]>>;
+    setPrivateLinkToken: React.Dispatch<React.SetStateAction<string | null>>;
+
+    // Валідація
+    linkErrors: LinkErrors; // <-- ДОДАНО
     // Фінальні дані для відправки та прев'ю
     projectUpdateData: ProjectUpdateData;
 }
@@ -62,19 +83,43 @@ interface EditProjectProviderProps {
 export const EditProjectProvider: React.FC<EditProjectProviderProps> = ({ projectData, children }) => {
     // --- Увесь стан форми живе тут ---
     const [projectName, setProjectName] = useState('');
-    const [visibility, setVisibility] = useState<'public' | 'private'>('public');
+    const [visibility, setVisibility] = useState<'public' | 'private' | 'link'>('public');
     const [githubLinks, setGithubLinks] = useState<string[]>(['']);
     const [deploymentLink, setDeploymentLink] = useState('');
     const [description, setDescription] = useState('');
     const [selectedTechnologies, setSelectedTechnologies] = useState<SelectedTechnology[]>([]);
     const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
     const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
+    const [privateLinkToken, setPrivateLinkToken] = useState<string | null>(null);
+    // --- Стан для помилок посилань ---
+    const [linkErrors, setLinkErrors] = useState<LinkErrors>({ github: null, demo: null }); // <-- ДОДАНО СТАН
+
+    // --- Функція валідації посилань (Винесена для reuse) ---
+    const validateLinks = (ghLinks: string[], demoLink: string) => {
+        let ghError: string | null = null;
+        const nonBlankGhLinks = ghLinks.filter(l => l.trim());
+
+        for (const link of nonBlankGhLinks) {
+            if (!isGitHubUrlValid(link)) {
+                ghError = 'Некоректне посилання на GitHub. Потрібен повний URL.';
+                break;
+            }
+        }
+
+        let demoError: string | null = null;
+        if (demoLink.trim() && !isValidUrl(demoLink)) {
+            demoError = 'Некоректний URL для опублікованого проекту.';
+        }
+
+        setLinkErrors({ github: ghError, demo: demoError });
+    };
 
     // --- Ефект для заповнення стану з projectData ---
     useEffect(() => {
         if (projectData) {
             const links = projectData.githubUrl ? projectData.githubUrl.split(',').filter(link => link.trim()) : [''];
             if (links.length === 0) links.push('');
+
 
             const mappedMedia: MediaFile[] = projectData.media.map(m => ({
                 id: m.id,
@@ -102,13 +147,19 @@ export const EditProjectProvider: React.FC<EditProjectProviderProps> = ({ projec
             setSelectedTechnologies(projectData.technologies || []);
             setMediaFiles(mappedMedia);
             setCollaborators(mappedCollaborators);
-            setVisibility(projectData.visible === 'PUBLIC' ? 'public' : 'private');
+            // Ініціалізуємо валідацію посилань для початкових даних
+            validateLinks(links, projectData.demoUrl || '');
 
             if (mappedMedia.length > 0 && !mappedMedia.some(f => f.isMain)) {
                 setMediaFiles(prev => prev.map((f, i) => i === 0 ? { ...f, isMain: true } : f));
             }
         }
     }, [projectData]);
+
+    // --- Ефект для автоматичної валідації при зміні посилань ---
+    useEffect(() => {
+        validateLinks(githubLinks, deploymentLink);
+    }, [githubLinks, deploymentLink]); // <-- ДОДАНО ЕФЕКТ
 
     // --- 'projectUpdateData' тепер також живе в context ---
     const projectUpdateData = useMemo(() => {
@@ -122,7 +173,6 @@ export const EditProjectProvider: React.FC<EditProjectProviderProps> = ({ projec
             mediaIds: uploadedMediaIds,
             subauthorIds: collaborators.map(c => c.id),
             previewId: mediaFiles.find(f => f.isMain)?.serverId || null,
-            visible: visibility === 'private' ? 'PRIVATE' : 'PUBLIC',
             collaborators: collaborators,
         };
     }, [projectName, description, githubLinks, deploymentLink, selectedTechnologies, mediaFiles, collaborators, visibility]);
@@ -136,6 +186,9 @@ export const EditProjectProvider: React.FC<EditProjectProviderProps> = ({ projec
         selectedTechnologies, setSelectedTechnologies,
         mediaFiles, setMediaFiles,
         collaborators, setCollaborators,
+        setPrivateLinkToken,
+        privateLinkToken,
+        linkErrors, // <-- Експортуємо стан помилок
         projectUpdateData
     };
 

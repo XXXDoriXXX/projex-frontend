@@ -18,8 +18,15 @@ interface UpdateProjectDto {
     technologies?: string[];
     subauthorIds?: string[];
     previewId?: string | null;
-    visible?: 'PUBLIC' | 'PRIVATE';
 }
+export interface ChangeVisibilityResponse {
+    success: boolean;
+    data: {
+        privateLinkToken: string | null;
+    };
+    message: string;
+}
+export type ProjectVisibility = 'link' | 'public' | 'private';
 interface UploadMediaData {
     id: string;
     url: string;
@@ -213,6 +220,17 @@ export const projectApi = createApi({
                 USER_PROJECTS_TAG
             ],
         }),
+        changeProjectVisibility: builder.mutation<ChangeVisibilityResponse, { id: string, visibility: ProjectVisibility }>({
+            query: ({ id, visibility }) => ({
+                url: `project/visible/${id}`,
+                method: 'PATCH',
+                body: { visible: visibility },
+            }),
+            invalidatesTags: (result, error, { id }) => [
+                { type: PROJECT_TAG, id },
+                PROJECT_LIST_TAG,
+            ],
+        }),
     }),
 });
 
@@ -228,5 +246,6 @@ export const {
     useLazyGetProjectsQuery,
     useUpdateProjectMutation,
     useUploadMediaMutation,
-    useUpdateProjectStatusMutation
+    useUpdateProjectStatusMutation,
+    useChangeProjectVisibilityMutation,
 } = projectApi;
