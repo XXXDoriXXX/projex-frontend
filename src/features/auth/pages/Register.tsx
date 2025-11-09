@@ -96,7 +96,7 @@ const Register = () => {
                         <GoogleLogin
                             onSuccess={async (credentialResponse) => {
                                 try {
-                                    const res = await axios.post('http://localhost:3000/api/auth/google', {
+                                    const res = await axios.post(import.meta.env.VITE_API_BASE_URL + 'auth/google', {
                                         idToken: credentialResponse.credential,
                                     });
                                     const { token } = res.data;
@@ -114,7 +114,7 @@ const Register = () => {
                         provider="github"
                         className="mt-4"
                         onClick={() =>
-                            window.location.href = `https://github.com/login/oauth/authorize?client_id=Ov23liJuqLlwYgqwEX9W&scope=user:email&redirect_uri=http://localhost:5173/auth/github/callback`
+                            window.location.href = `https://github.com/login/oauth/authorize?client_id=Ov23liJuqLlwYgqwEX9W&scope=user:email&redirect_uri=${window.location.origin}/auth/github/`
                         }
                     />
                     <DisplayText variant="secondary" className="mt-4">

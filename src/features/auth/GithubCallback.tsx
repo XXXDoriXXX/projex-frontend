@@ -18,7 +18,7 @@ const GithubCallback = () => {
 
         const exchangeCodeForToken = async () => {
             try {
-                const res = await axios.get(`http://localhost:3000/api/auth/github?code=${code}`);
+                const res = await axios.get(import.meta.env.VITE_API_BASE_URL+`auth/github?code=${code}`);
                 const { token } = res.data;
                 localStorage.setItem("token", token);
                 navigate("/");
