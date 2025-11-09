@@ -1,46 +1,43 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DisplayText from "../../../components/DisplayText.tsx";
 import DisplayForm from "../../../components/DisplayForm.tsx";
 import FormInput from "../../../components/FormInput.tsx";
 import Button from "../../../components/Button.tsx";
 import SocialButton from "../../../components/SocialButton.tsx";
-import logo from "../../../assets/img/logo_small.png";
 import {useNavigate} from "react-router-dom";
 import axios from "axios";
-import DisplayDiv from "../../../components/DisplayDiv.tsx";
 import {GoogleLogin} from "@react-oauth/google";
+import Loading from "../../../components/Loading.tsx";
+import ErrorMessage from "../../../components/ErrorMessage.tsx";
+import {useRegisterMutation} from "../api/authApi.ts";
 
 const Register = () => {
     const [form, setForm] = useState({ username:"",email: "", password: "" });
     const navigate = useNavigate();
+
+    const [registerMutation, { isLoading, isError, data, error, isSuccess }] = useRegisterMutation();
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setForm({ ...form, [e.target.name]: e.target.value });
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!form.username || !form.email || !form.password) {
             console.error("All fields are required");
             return;
         }
-        try {
-            const res = await axios.post<RegisterResponse>(
-                "http://localhost:3000/api/auth/register",
-                form
-            );
-            const { token } = res.data;
-            localStorage.setItem("token", token);
-            navigate("/code");
-        } catch (err) {
-            console.error("Registration Error:", err);
-            // TODO: Додати компонент ErrorMessage, як в Login.tsx
-        }
+        registerMutation(form);
     };
 
-    type RegisterResponse = {
-        token: string;
-    }
+    useEffect(() => {
+        if (isSuccess && data) {
+            localStorage.setItem("token", data.token);
+            navigate("/auth/code");
+        }
+    }, [isSuccess, data, navigate]);
+
+
 
     return (
         <div className="min-h-screen min-w-screen bg-background text-foreground relative overflow-hidden items-center justify-center flex p-4">
@@ -50,23 +47,9 @@ const Register = () => {
             <div className="absolute bottom-20 left-20 size-96 bg-cyan-500/10 rounded-full blur-3xl" />
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-96 bg-pink-500/10 rounded-full blur-3xl" />
 
-            {/* Внутрішній контейнер, що центрує обидві колонки */}
+
             <div className="relative z-10 flex items-center justify-center w-full max-w-6xl">
 
-                {/* Ліва частина (як у вас і була) */}
-                <DisplayDiv className={"hidden xl:block flex flex-col max-w-max mr-16"}>
-                    <DisplayText variant={"primary"} className={"text-7xl font-bold leading-tight "}>
-                        Share yourself
-                    </DisplayText>
-                    <img src = {logo} alt="Projex Logo" className="w-auto h-auto mb-4" />
-
-                    <DisplayText variant={"secondary"} className="mb-6 text-3xl">
-                        Show the world your ideas and projects.
-                        Create a portfolio, find like-minded people, and grow together.
-                    </DisplayText>
-                </DisplayDiv>
-
-                {/* Права частина (Форма) */}
                 <DisplayForm onSubmit={handleSubmit} >
                     <DisplayText variant="primary" className="mb-4">Hello!</DisplayText>
                     <DisplayText variant="secondary">We are really happy to see you</DisplayText>
@@ -95,7 +78,15 @@ const Register = () => {
                         required
                         className="mb-6 mt-2"
                     />
-                    {/* TODO: Додати сюди <Loading /> та <ErrorMessage /> як в Login.tsx */}
+
+                    {isLoading && <Loading text="Registering..." />}
+                    {isError && (
+                        <ErrorMessage
+                            message={(error as any)?.data?.message || (error as any)?.message || "Registration failed"}
+                            title="Registration Failed"
+                        />
+                    )}
+
                     <Button variant={"primary"} type={"submit"} className={"w-full"}>Register</Button>
 
                     <DisplayText variant="secondary" className="mt-4">

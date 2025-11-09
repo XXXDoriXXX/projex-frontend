@@ -1,23 +1,43 @@
-
 import { useState, useEffect } from "react";
 import DisplayText from "../../../components/DisplayText.tsx";
 import DisplayForm from "../../../components/DisplayForm.tsx";
 import Button from "../../../components/Button.tsx";
 import OTPInput from "../../../components/OTPInput.tsx";
-import axios from "axios";
+
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { setToken } from "../authSlice.ts";
 import type { AppDispatch } from "../../../store.ts";
+import Loading from "../../../components/Loading.tsx";
+import ErrorMessage from "../../../components/ErrorMessage.tsx";
+import { useVerifyEmailMutation, useSendVerificationCodeMutation } from "../api/authApi.ts";
 
-const RESEND_TIMEOUT = 60; // секунд
+
+const RESEND_TIMEOUT = 60;
 
 const Code = () => {
     const [code, setCode] = useState("");
-    const [resendTimer, setResendTimer] = useState(RESEND_TIMEOUT);
-    const [isResending, setIsResending] = useState(false);
+    const [resendTimer, setResendTimer] = useState(0);
     const navigate = useNavigate();
     const dispatch = useDispatch<AppDispatch>()
+
+    const [verifyEmail, {
+        isLoading: isVerifying,
+        isError: isVerifyError,
+        error: verifyError,
+        isSuccess: isVerifySuccess,
+    }] = useVerifyEmailMutation();
+
+    const [sendCode, {
+        isLoading: isResending,
+        isError: isResendError,
+        error: resendError,
+        isSuccess: isResendSuccess
+    }] = useSendVerificationCodeMutation();
+
+    const [displayError, setDisplayError] = useState<any | null>(null);
+
+
     useEffect(() => {
         if (resendTimer === 0) return;
         const timerId = setInterval(() => {
@@ -26,49 +46,70 @@ const Code = () => {
         return () => clearInterval(timerId);
     }, [resendTimer]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    useEffect(() => {
+        if (isVerifySuccess) {
+            const finalToken = localStorage.getItem("token");
+
+            if (finalToken) {
+                dispatch(setToken(finalToken));
+
+                navigate("/");
+            } else {
+                navigate("/auth/login");
+            }
+        }
+    }, [isVerifySuccess, dispatch, navigate]);
+    useEffect(() => {
+        if (isResendSuccess) {
+            setResendTimer(RESEND_TIMEOUT);
+            setDisplayError(null);
+            console.log("Verification code resent!");
+        }
+    }, [isResendSuccess]);
+
+
+    useEffect(() => {
+        if (isVerifyError) {
+            setDisplayError(verifyError);
+        } else if (isResendError) {
+            setDisplayError(resendError);
+        }
+    }, [isVerifyError, isResendError, verifyError, resendError]);
+
+
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
         if (code.length !== 6) {
-            console.error("Please enter a valid 6-digit code.");
+            setDisplayError({ data: { message: "Please enter a valid 6-digit code." } });
             return;
         }
-        try {
-            const token = localStorage.getItem("token");
-            if (!token) {
-                throw new Error("No token found");
-            }
-            await axios.post(`http://localhost:3000/api/auth/verify-email/${code}` ,{}, {headers: {
-                    Authorization: `Bearer ${token}`,
-                },}, );
 
-            dispatch(setToken(token));
-            localStorage.removeItem("token");
-            navigate("/");
+        setDisplayError(null);
 
-        } catch (err) {
-            console.error("Verification Error:", err);
-            // TODO: Додати компонент ErrorMessage, як в Login.tsx
+        const token = localStorage.getItem("token");
+        if (!token) {
+            setDisplayError({ data: { message: "Authentication token is missing. Please log in again." } });
+            navigate("/auth/login");
+            return;
         }
+
+        verifyEmail({ code, token });
     };
 
-    const handleResend = async () => {
-        if (resendTimer > 0) return;
-        setIsResending(true);
-        try {
-            const token = localStorage.getItem("token");
-            if (!token) {
-                throw new Error("No token found");
-            }
-            await axios.post("http://localhost:3000/api/auth/send-verification-code" ,{}, {headers: {
-                    Authorization: `Bearer ${token}`,
-                },}, );
-            setResendTimer(RESEND_TIMEOUT);
-            console.log("Verification code resent!");
-        } catch (err) {
-            console.error("Error resending verification code:", err);
-        } finally {
-            setIsResending(false);
+    const handleResend = () => {
+        if (resendTimer > 0 || isResending) return;
+
+        setDisplayError(null);
+
+        const token = localStorage.getItem("token");
+        if (!token) {
+            setDisplayError({ data: { message: "Authentication token is missing. Please log in again." } });
+            navigate("/auth/login");
+            return;
         }
+
+        sendCode({ token });
     };
 
     return (
@@ -87,10 +128,21 @@ const Code = () => {
                 </DisplayText>
 
                 <OTPInput value={code} onChange={setCode} />
+                {(isVerifying || isResending) && <Loading text={isVerifying ? "Verifying..." : "Resending..."} />}
+                {displayError && (
+                    <ErrorMessage
+                        message={(displayError as any)?.data?.message || (displayError as any)?.message || "An unknown error occurred."}
+                        title="Verification failed"
+                        onDismiss={() => setDisplayError(null)}
+                    />
+                )}
 
-                {/* TODO: Додати сюди <Loading /> та <ErrorMessage /> як в Login.tsx */}
-
-                <Button variant="primary" type="submit" className="w-full mt-4">
+                <Button
+                    variant="primary"
+                    type="submit"
+                    className="w-full mt-4"
+                    disabled={isVerifying || isResending}
+                >
                     Confirm
                 </Button>
 

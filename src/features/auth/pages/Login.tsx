@@ -111,7 +111,7 @@ const Login = () => {
 
 
                 <DisplayText variant="secondary" className="mt-4">
-                    Don't have an account? <a href="/register" className="text-blue-300 hover:text-blue-200">Register</a>
+                    Don't have an account? <a href="/auth/register" className="text-blue-300 hover:text-blue-200">Register</a>
                 </DisplayText>
             </DisplayForm>
         </div>

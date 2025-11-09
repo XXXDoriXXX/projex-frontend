@@ -14,7 +14,10 @@ export interface UserResponse {
     data: User;
     message: string;
 }
-
+export interface VerificationSuccessResponse {
+    success: boolean;
+    message: string;
+}
 
 export const authApi = createApi({
     reducerPath: 'authApi',
@@ -28,13 +31,28 @@ export const authApi = createApi({
                 body: credentials,
             }),
         }),
-        register:builder.mutation<User, { username: string; email: string; password: string }>({
+        register:builder.mutation<{ token: string }, { username: string; email: string; password: string }>({
             query: (userData) => ({
                 url: 'auth/register',
                 method: 'POST',
                 body: userData,
             }),
             invalidatesTags: ['User'],
+        }),
+        verifyEmail: builder.mutation<VerificationSuccessResponse, { code: string; token: string }>({
+            query: ({ code, token }) => ({
+                url: `auth/verify-email`,
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` },
+                body: { code }
+            }),
+        }),
+        sendVerificationCode: builder.mutation<void, { token: string }>({
+            query: ({ token }) => ({
+                url: 'auth/send-verification-code',
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` },
+            }),
         }),
         getProfile: builder.query<User, string>({
             query: (token) => ({
@@ -47,4 +65,5 @@ export const authApi = createApi({
     }),
 });
 
-export const { useLoginMutation, useGetProfileQuery } = authApi;
+// Експорт нових хуків
+export const { useLoginMutation, useGetProfileQuery, useRegisterMutation, useVerifyEmailMutation, useSendVerificationCodeMutation } = authApi;
