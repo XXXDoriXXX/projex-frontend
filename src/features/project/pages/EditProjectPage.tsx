@@ -76,11 +76,8 @@ const EditProjectLayout = ({ projectId, handleSubmit, isSubmitting, canSubmit }:
                 </Button>
             </div>
 
-            {/* Content Grid */}
             <div className="grid lg:grid-cols-[2fr_1fr] gap-8">
-                {/* Ліва колонка: Секції редагування */}
                 <div className="space-y-6">
-                    {/* 1. Основні параметри */}
                     <div className="bg-card/50 backdrop-blur-2xl border border-border/50 rounded-3xl p-4 sm:p-6 shadow-2xl">
                         <SectionHeader title="Основні параметри" icon={FileText} isOpen={openSections.basics} onClick={() => toggleSection('basics')} />
                         <motion.div initial={false} animate={{ height: openSections.basics ? 'auto' : 0 }} transition={{ duration: 0.3, ease: 'easeInOut' }} className="overflow-hidden">
@@ -91,7 +88,6 @@ const EditProjectLayout = ({ projectId, handleSubmit, isSubmitting, canSubmit }:
                             />
                         </motion.div>
                     </div>
-                    {/* 2. Опис та технології */}
                     <div className="bg-card/50 backdrop-blur-2xl border border-border/50 rounded-3xl p-4 sm:p-6 shadow-2xl">
                         <SectionHeader title="Опис та технології" icon={Code2} isOpen={openSections.details} onClick={() => toggleSection('details')} />
                         <motion.div initial={false} animate={{ height: openSections.details ? 'auto' : 0 }} transition={{ duration: 0.3, ease: 'easeInOut' }} className="overflow-hidden">
@@ -101,7 +97,6 @@ const EditProjectLayout = ({ projectId, handleSubmit, isSubmitting, canSubmit }:
                             />
                         </motion.div>
                     </div>
-                    {/* 3. Посилання */}
                     <div className="bg-card/50 backdrop-blur-2xl border border-border/50 rounded-3xl p-4 sm:p-6 shadow-2xl">
                         <SectionHeader title="Посилання" icon={Github} isOpen={openSections.links} onClick={() => toggleSection('links')} />
                         <motion.div initial={false} animate={{ height: openSections.links ? 'auto' : 0 }} transition={{ duration: 0.3, ease: 'easeInOut' }} className="overflow-hidden">

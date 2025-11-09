@@ -1,4 +1,3 @@
-
 import { createBrowserRouter } from "react-router-dom";
 import Home from "../features/home/pages/Home.tsx";
 import Login from "../features/auth/pages/Login.tsx";
@@ -17,6 +16,7 @@ import HackathonPage from "../features/hackathons/pages/HackathonPage.tsx";
 import EditHackathonPage from "../features/hackathons/pages/EditHackathonPage.tsx";
 import HackathonListPage from "../features/hackathons/pages/HackathonListPage.tsx";
 import ProjectListPage from "../features/project/pages/ProjectListPage.tsx";
+import NotFound from "../shared/pages/NotFound.tsx";
 
 export const router = createBrowserRouter([
     {
@@ -35,6 +35,8 @@ export const router = createBrowserRouter([
             { path: "/hackathon/view/:id", element: <HackathonPage /> },
             { path: "/hackathon/edit/:id", element: <EditHackathonPage /> },
             { path: "/hackathon/explore", element: <HackathonListPage /> },
+
+            { path: "*", element: <NotFound /> }
         ],
     },
     {
@@ -45,6 +47,10 @@ export const router = createBrowserRouter([
             { path: "register", element: <Register /> },
             { path: "code", element: <Code /> },
             { path: "github", element: <GithubCallback /> },
+
+            { path: "*", element: <NotFound /> }
         ]
     },
+
+    { path: "*", element: <NotFound /> }
 ]);
