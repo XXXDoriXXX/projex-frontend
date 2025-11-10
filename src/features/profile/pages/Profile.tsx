@@ -97,7 +97,7 @@ const UserProfile = () => {
     };
 
     const handleEditProfile = () => {
-        navigate(`/profile/edit/${user?.username}`);
+        navigate(`/profile/edit/`);
     };
 
     const handleNavigateProject = (projectId: string) => () => {
