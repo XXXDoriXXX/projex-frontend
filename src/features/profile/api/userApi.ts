@@ -24,6 +24,12 @@ interface UpdateProfileResponse {
     data: User;
     message: string;
 }
+export interface SimpleUser {
+    id: string;
+    username: string;
+    avatarUrl?: string;
+     bio?: string;
+}
 
 interface SocialLinkPayload {
     platform: string;
@@ -44,9 +50,25 @@ interface SocialMedia {
     url: string;
     handle?: string;
 }
+interface FollowStatusApiResponse {
+    success: boolean;
+    data: {
+        isFollowed: boolean;
+    };
+    message: string;
+}
+
+export interface FollowStatus {
+    isFollowing: boolean;
+}
+interface UsersListResponse {
+    success: boolean;
+    data: SimpleUser[];
+    message: string;
+}
 export const userApi = createApi({
     reducerPath: 'userApi',
-    tagTypes: ['User', 'Profile'],
+    tagTypes: ['User', 'Profile', 'FollowLists', 'FollowStatus'],
     baseQuery: fetchBaseQuery({
         baseUrl: import.meta.env.VITE_API_BASE_URL,
         prepareHeaders: (headers, { getState }) => {
@@ -134,6 +156,49 @@ export const userApi = createApi({
                 } catch (err) { }
             },
         }),
+        followUser: builder.mutation<void, string>({
+            query: (userId) => ({
+                url: `user/follow/${userId}`,
+                method: 'POST',
+            }),
+            invalidatesTags: (result, error, userId) => [
+                { type: 'Profile', id: userId },
+                { type: 'FollowStatus', id: userId },
+                'Profile',
+                'FollowLists'
+            ],
+        }),
+
+        unfollowUser: builder.mutation<void, string>({
+            query: (userId) => ({
+                url: `user/follow/${userId}`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: (result, error, userId) => [
+                { type: 'Profile', id: userId },
+                { type: 'FollowStatus', id: userId },
+                'Profile',
+                'FollowLists'
+            ],
+        }),
+        getIsUserFollowed: builder.query<FollowStatus, string>({
+            query: (userId) => `user/follow/status/${userId}`,
+            transformResponse: (response: FollowStatusApiResponse) => ({
+                isFollowing: response.data.isFollowed
+            }),
+            providesTags: (result, error, userId) => [{ type: 'FollowStatus', id: userId }],
+        }),
+        getFollowers: builder.query<SimpleUser[], string>({
+            query: (userId) => `user/${userId}/followers`,
+            transformResponse: (response: UsersListResponse) => response.data,
+            providesTags: ['FollowLists'],
+        }),
+
+        getFollowing: builder.query<SimpleUser[], string>({
+            query: (userId) => `user/${userId}/following`,
+            transformResponse: (response: UsersListResponse) => response.data,
+            providesTags: ['FollowLists'],
+        }),
     }),
 });
 
@@ -145,5 +210,10 @@ export const {
     useDeleteSocialMediaLinkMutation,
     useUpdateUserAvatarMutation,
     useSendPasswordResetCodeMutation,
-    useResetPasswordMutation
+    useResetPasswordMutation,
+    useFollowUserMutation,
+    useUnfollowUserMutation,
+    useGetFollowersQuery,
+    useGetFollowingQuery,
+    useGetIsUserFollowedQuery,
 } = userApi;
