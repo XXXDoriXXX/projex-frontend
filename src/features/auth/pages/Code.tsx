@@ -1,9 +1,9 @@
+// Code.tsx
 import { useState, useEffect } from "react";
 import DisplayText from "../../../components/DisplayText.tsx";
 import DisplayForm from "../../../components/DisplayForm.tsx";
 import Button from "../../../components/Button.tsx";
 import OTPInput from "../../../components/OTPInput.tsx";
-
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { setToken } from "../authSlice.ts";
@@ -11,7 +11,6 @@ import type { AppDispatch } from "../../../store.ts";
 import Loading from "../../../components/Loading.tsx";
 import ErrorMessage from "../../../components/ErrorMessage.tsx";
 import { useVerifyEmailMutation, useSendVerificationCodeMutation } from "../api/authApi.ts";
-
 
 const RESEND_TIMEOUT = 60;
 
@@ -37,7 +36,6 @@ const Code = () => {
 
     const [displayError, setDisplayError] = useState<any | null>(null);
 
-
     useEffect(() => {
         if (resendTimer === 0) return;
         const timerId = setInterval(() => {
@@ -49,24 +47,21 @@ const Code = () => {
     useEffect(() => {
         if (isVerifySuccess) {
             const finalToken = localStorage.getItem("token");
-
             if (finalToken) {
                 dispatch(setToken(finalToken));
-
                 navigate("/");
             } else {
                 navigate("/auth/login");
             }
         }
     }, [isVerifySuccess, dispatch, navigate]);
+
     useEffect(() => {
         if (isResendSuccess) {
             setResendTimer(RESEND_TIMEOUT);
             setDisplayError(null);
-            console.log("Verification code resent!");
         }
     }, [isResendSuccess]);
-
 
     useEffect(() => {
         if (isVerifyError) {
@@ -76,63 +71,57 @@ const Code = () => {
         }
     }, [isVerifyError, isResendError, verifyError, resendError]);
 
-
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-
         if (code.length !== 6) {
-            setDisplayError({ data: { message: "Please enter a valid 6-digit code." } });
+            setDisplayError({ data: { message: "Будь ласка, введіть 6-значний код." } });
             return;
         }
-
         setDisplayError(null);
-
         const token = localStorage.getItem("token");
         if (!token) {
-            setDisplayError({ data: { message: "Authentication token is missing. Please log in again." } });
+            setDisplayError({ data: { message: "Токен відсутній. Увійдіть знову." } });
             navigate("/auth/login");
             return;
         }
-
         verifyEmail({ code, token });
     };
 
     const handleResend = () => {
         if (resendTimer > 0 || isResending) return;
-
         setDisplayError(null);
-
         const token = localStorage.getItem("token");
         if (!token) {
-            setDisplayError({ data: { message: "Authentication token is missing. Please log in again." } });
+            setDisplayError({ data: { message: "Токен відсутній. Увійдіть знову." } });
             navigate("/auth/login");
             return;
         }
-
         sendCode({ token });
     };
 
     return (
         <div className="min-h-screen min-w-screen bg-background text-foreground relative overflow-hidden items-center justify-center flex flex-col p-4">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-cyan-500/10" />
-            <div className="absolute top-20 right-20 size-96 bg-primary/20 rounded-full blur-3xl" />
-            <div className="absolute bottom-20 left-20 size-96 bg-cyan-500/10 rounded-full blur-3xl" />
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-96 bg-pink-500/10 rounded-full blur-3xl" />
+            <div className="absolute top-20 right-5 sm:right-20 size-48 sm:size-96 bg-primary/20 rounded-full blur-3xl" />
+            <div className="absolute bottom-20 left-5 sm:left-20 size-48 sm:size-96 bg-cyan-500/10 rounded-full blur-3xl" />
 
-            <DisplayForm onSubmit={handleSubmit} className={"relative justify-center "}>
-                <DisplayText variant="primary" className="mb-4">
-                    Email verification
+            <DisplayForm onSubmit={handleSubmit} className="relative justify-center w-full max-w-md mx-auto px-4 sm:px-8 py-6 sm:py-10 z-10">
+                <DisplayText variant="primary" className="mb-4 text-center text-2xl sm:text-3xl">
+                    Підтвердження Email
                 </DisplayText>
-                <DisplayText variant="secondary" className="mb-4">
-                    We sent a 6-digit code to your email. Enter it below.
+                <DisplayText variant="secondary" className="mb-6 text-center text-sm sm:text-base">
+                    Ми відправили 6-значний код на ваш email. Введіть його нижче.
                 </DisplayText>
 
-                <OTPInput value={code} onChange={setCode} />
-                {(isVerifying || isResending) && <Loading text={isVerifying ? "Verifying..." : "Resending..."} />}
+                <div className="flex justify-center mb-6">
+                    <OTPInput value={code} onChange={setCode} />
+                </div>
+
+                {(isVerifying || isResending) && <Loading text={isVerifying ? "Перевірка..." : "Відправка..."} />}
                 {displayError && (
                     <ErrorMessage
-                        message={(displayError as any)?.data?.message || (displayError as any)?.message || "An unknown error occurred."}
-                        title="Verification failed"
+                        message={(displayError as any)?.data?.message || (displayError as any)?.message || "Сталася невідома помилка."}
+                        title="Помилка підтвердження"
                         onDismiss={() => setDisplayError(null)}
                     />
                 )}
@@ -140,25 +129,24 @@ const Code = () => {
                 <Button
                     variant="primary"
                     type="submit"
-                    className="w-full mt-4"
+                    className="w-full mt-4 py-3 text-base sm:text-lg"
                     disabled={isVerifying || isResending}
                 >
-                    Confirm
+                    Підтвердити
                 </Button>
 
-                <div className="mt-4 text-center text-sm text-muted-foreground">
-                    Didn't receive the code?{" "}
+                <div className="mt-6 text-center text-sm sm:text-base text-muted-foreground">
+                    Не отримали код?{" "}
                     <button
                         type="button"
                         onClick={handleResend}
                         disabled={resendTimer > 0 || isResending}
-                        className={`underline font-semibold transition-colors ${
-                            resendTimer > 0 || isResending
-                                ? "cursor-not-allowed text-muted-foreground opacity-50"
-                                : "cursor-pointer text-primary/80 hover:text-primary"
+                        className={`underline font-semibold transition-colors ${resendTimer > 0 || isResending
+                            ? "cursor-not-allowed text-muted-foreground opacity-50"
+                            : "cursor-pointer text-primary/80 hover:text-primary"
                         }`}
                     >
-                        {resendTimer > 0 ? `Resend code in ${resendTimer}s` : isResending ? "Resending..." : "Resend code"}
+                        {resendTimer > 0 ? `Відправити знову через ${resendTimer}с` : isResending ? "Відправка..." : "Відправити код"}
                     </button>
                 </div>
             </DisplayForm>
