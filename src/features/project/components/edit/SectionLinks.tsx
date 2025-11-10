@@ -46,7 +46,6 @@ export const SectionLinks = () => {
                     <Plus className="size-4" /> Додати репозиторій
                 </Button>
             </div>
-            {/* Deployment Link */}
             <div className="space-y-2">
                 <Label htmlFor="deploymentLink" className="flex items-center gap-2">
                     <LinkIcon className="size-4 text-primary" /> Посилання на deploy

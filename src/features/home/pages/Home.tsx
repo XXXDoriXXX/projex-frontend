@@ -380,9 +380,9 @@ const CTASection = () => {
     const navigate = useNavigate();
 
     return (
-        <section className="py-24 relative overflow-hidden">
+        <section className="py-16 sm:py-24 relative overflow-hidden px-4">
             <div className="absolute inset-0 bg-gradient-to-t from-background to-card/30 z-0" />
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 size-[600px] bg-primary/10 rounded-full blur-3xl" />
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 size-[300px] sm:size-[600px] bg-primary/10 rounded-full blur-3xl" />
 
             <motion.div
                 className="container mx-auto px-4 text-center relative z-10"
@@ -391,14 +391,14 @@ const CTASection = () => {
                 transition={{ duration: 0.5 }}
                 viewport={{ once: true, amount: 0.5 }}
             >
-                <Code className="size-12 text-primary mx-auto mb-4" />
-                <h2 className="text-4xl md:text-5xl font-bold mb-4">Готові показати свій код?</h2>
-                <p className="text-lg text-muted-foreground mb-8 max-w-xl mx-auto">
+                <Code className="size-10 sm:size-12 text-primary mx-auto mb-4" />
+                <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">Готові показати свій код?</h2>
+                <p className="text-base sm:text-lg text-muted-foreground mb-8 max-w-xl mx-auto">
                     Приєднуйтесь до тисяч розробників. Створіть портфоліо, знайдіть команду та вигравайте призи.
                 </p>
                 <Button
                     variant="primary"
-                    className="py-3 px-8 text-lg rounded-full"
+                    className="py-3 px-8 text-lg rounded-full mx-auto inline-flex items-center"
                     onClick={() => navigate('/auth/register')}
                 >
                     Зареєструватися
@@ -408,7 +408,6 @@ const CTASection = () => {
         </section>
     );
 };
-
 const Footer = () => {
     return (
         <footer className="py-12 bg-card/30 border-t border-border/50">

@@ -45,7 +45,6 @@ export function StepThemes(){
             </div>
         </div>
 
-        {/* Існуючі теми */}
         <div className="space-y-3">
             <Label>Оберіть існуючі теми</Label>
             <div className="flex flex-wrap gap-2">
@@ -66,10 +65,9 @@ export function StepThemes(){
             </div>
         </div>
 
-        {/* Нові теми */}
         <div className="space-y-3">
             <Label htmlFor="newTheme">Додати нову тему</Label>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
                 <Input
                     id="newTheme"
                     type="text"
@@ -77,9 +75,13 @@ export function StepThemes(){
                     value={newThemeInput}
                     onChange={(e) => setNewThemeInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddNewTheme())}
-                    className="rounded-2xl bg-secondary/50"
+                    className="rounded-2xl bg-secondary/50 h-12"
                 />
-                <Button type="button" onClick={handleAddNewTheme} className="rounded-xl bg-primary/90 hover:bg-primary">
+                <Button
+                    type="button"
+                    onClick={handleAddNewTheme}
+                    className="rounded-xl bg-primary/90 hover:bg-primary w-full sm:w-auto h-12" // Додано w-full та h-12
+                >
                     Додати
                 </Button>
             </div>

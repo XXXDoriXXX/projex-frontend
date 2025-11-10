@@ -5,7 +5,6 @@ import type { RootState } from "../../../store.ts";
 import { motion } from "framer-motion";
 
 import {
-    type HackathonStatus,
     useGetHackathonByIdQuery,
     useJoinHackathonMutation,
     useLeaveHackathonMutation
@@ -22,7 +21,6 @@ import {TabParticipants} from "../components/tabs/TabParticipants.tsx";
 import {TabRating} from "../components/tabs/TabRating.tsx";
 import {TabMySubmission} from "../components/tabs/TabMySubmission.tsx";
 import {useState} from "react";
-import {HackathonStatusSwitcher} from "../components/hackathon/HackathonStatusSwitcher.tsx";
 
 export type HackathonTab = "overview" | "projects" | "participants" | "leaderboard" | "submission" | "rating";
 

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -42,11 +41,8 @@ const toDatetimeLocal = (isoDate: string): string => {
     }
 };
 
-
-
 export function EditHackathonPage({ onNavigateBack }: HackathonPageProps) {
     const { id: hackathonId } = useParams<{ id: string }>();
-    console.log("id:"+hackathonId);
     const navigate = useNavigate();
 
     const {
@@ -224,7 +220,7 @@ export function EditHackathonPage({ onNavigateBack }: HackathonPageProps) {
             themes: selectedThemes,
         };
     }, [title, description, startDate, endDate, selectedThemes, newThemes, judges, ratingCategories, allowParticipantRating, allowPublicRating]);
-    console.log("main data:", selectedThemes);
+
     const canSubmit = title.trim() !== '' && startDate && endDate;
 
     const handleSubmit = async () => {
@@ -244,6 +240,7 @@ export function EditHackathonPage({ onNavigateBack }: HackathonPageProps) {
         }
     };
 
+
     if (isHackathonLoading) {
         return <Loading fullScreen text="Завантаження хакатону для редагування..." />;
     }
@@ -260,10 +257,12 @@ export function EditHackathonPage({ onNavigateBack }: HackathonPageProps) {
 
     return (
         <div className="min-h-screen bg-background text-foreground relative ">
-            {/* Фони */}
+
+            {/* АДАПТАЦІЯ ФОНІВ */}
             <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-cyan-500/10" />
-            <div className="absolute top-20 right-20 size-96 bg-primary/20 rounded-full blur-3xl" />
-            <div className="absolute bottom-20 left-20 size-96 bg-cyan-500/10 rounded-full blur-3xl" />
+            <div className="absolute top-10 right-10 size-48 md:top-20 md:right-20 md:size-96 bg-primary/20 rounded-full blur-3xl z-0" /> {/* Зменшено розмір для мобільних */}
+            <div className="absolute bottom-10 left-10 size-48 md:bottom-20 md:left-20 md:size-96 bg-cyan-500/10 rounded-full blur-3xl z-0" /> {/* Зменшено розмір для мобільних */}
+            <div className="absolute top-1/3 left-1/3 size-48 md:size-96 bg-pink-500/10 rounded-full blur-3xl z-0" /> {/* Зменшено розмір для мобільних */}
 
             {(isUpdateError || showDismissableError) && (
                 <ErrorMessage
@@ -275,25 +274,26 @@ export function EditHackathonPage({ onNavigateBack }: HackathonPageProps) {
                 />
             )}
 
-            <div className="max-w-7xl mx-auto px-4 py-24 pt-16 sm:pt-24 min-h-[calc(100vh-6rem)]">
+            <div className="max-w-7xl mx-auto px-4 py-24 pt-16 sm:pt-24 min-h-[calc(100vh-6rem)] relative z-10">
 
-                <div className="sticky top-0 z-20 mb-8 bg-card/80 backdrop-blur-md border border-border/50 rounded-2xl p-6 shadow-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div className="flex items-center gap-4">
-                        <div className="size-12 bg-gradient-to-br from-primary to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-primary/30">
-                            <Edit className="size-6 text-white" />
+                {/* STICKY HEADER (Адаптовано) */}
+                <div className="sticky top-0 z-20 mb-6 sm:mb-8 bg-card/80 backdrop-blur-md border border-border/50 rounded-2xl p-3 sm:p-4 md:p-6 shadow-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="size-10 sm:size-12 bg-gradient-to-br from-primary to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-primary/30">
+                            <Edit className="size-5 sm:size-6 text-white" />
                         </div>
                         <div>
-                            <h1 className="text-xl font-bold">Редагування хакатону:</h1>
-                            <p className="text-lg text-primary">{title || 'Без назви'}</p>
+                            <h1 className="text-base sm:text-xl font-bold">Редагування хакатону:</h1>
+                            <p className="text-sm sm:text-lg text-primary truncate max-w-[200px] sm:max-w-md">{title || 'Без назви'}</p>
                         </div>
                     </div>
                     <Button
                         type="button"
                         onClick={handleSubmit}
                         disabled={isUpdating || !canSubmit}
-                        className="rounded-xl flex items-center gap-2 py-2 px-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-500/90 hover:to-emerald-600/90 shadow-md shadow-green-500/30 disabled:opacity-60"
+                        className="rounded-xl flex items-center gap-2 py-2 px-3 sm:px-4 text-sm sm:text-base bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-500/90 hover:to-emerald-600/90 shadow-md shadow-green-500/30 disabled:opacity-60 w-full sm:w-auto justify-center flex-shrink-0"
                     >
-                        {isUpdating ? <Loading /> : <Check className="size-4" />}
+                        {isUpdating ? <Loading className="size-4 animate-spin" /> : <Check className="size-4" />}
                         {isUpdating ? 'Оновлення...' : 'Зберегти зміни'}
                     </Button>
                 </div>
@@ -302,132 +302,256 @@ export function EditHackathonPage({ onNavigateBack }: HackathonPageProps) {
 
                     <div className="space-y-6">
 
-                        <div className="bg-card/50 backdrop-blur-2xl border border-border/50 rounded-3xl p-4 sm:p-6 shadow-2xl">
+                        {/* 1. ОСНОВНІ ПАРАМЕТРИ */}
+                        <section className="bg-card/50 backdrop-blur-2xl border border-border/50 rounded-3xl p-4 sm:p-6 shadow-2xl">
                             <EditSectionHeader title="Основні параметри" icon={FileText} isOpen={openSections.basics} onClick={() => toggleSection('basics')} />
                             <motion.div initial={false} animate={{ height: openSections.basics ? 'auto' : 0 }} transition={{ duration: 0.3, ease: 'easeInOut' }} className="overflow-hidden">
                                 <div className="pt-4 space-y-6">
-                                    <div className="space-y-2"> <Label htmlFor="hackathonTitle">Назва хакатону *</Label> <Input id="hackathonTitle" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Назва..." className="rounded-2xl bg-secondary/50" /> </div>
+                                    <div className="space-y-2"> <Label htmlFor="hackathonTitle">Назва хакатону *</Label> <Input id="hackathonTitle" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Назва..." className="rounded-2xl bg-secondary/50 focus-visible:ring-primary" /> </div>
                                     <div className="space-y-3">
                                         <div className="flex items-center justify-between">
                                             <Label htmlFor="description">Опис хакатону</Label>
-                                            <Button type="button" variant="ghost" onClick={() => setShowMarkdownPreview(!showMarkdownPreview)} className="flex items-center gap-1 text-primary hover:text-primary/80"> <Eye className="size-4" /> {showMarkdownPreview ? 'Редагувати' : 'Переглянути'} </Button>
+                                            <Button type="button" variant="ghost" onClick={() => setShowMarkdownPreview(!showMarkdownPreview)} className="flex items-center gap-1 text-primary hover:text-primary/80 p-2 h-auto text-sm"> <Eye className="size-4" /> {showMarkdownPreview ? 'Редагувати' : 'Переглянути'} </Button>
                                         </div>
                                         {!showMarkdownPreview ? (
-                                            <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="# Опис..." className="min-h-[250px] rounded-2xl bg-secondary/50 font-mono" />
+                                            <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="# Опис..." className="min-h-[250px] rounded-2xl bg-secondary/50 font-mono focus-visible:ring-primary" />
                                         ) : (
-                                            <div className="min-h-[250px] rounded-2xl bg-secondary/50 p-4 prose prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: renderMarkdown(description) }} />
+                                            <div className="min-h-[250px] rounded-2xl bg-secondary/50 p-4 prose prose-invert max-w-none border border-primary/30 shadow-inner" dangerouslySetInnerHTML={{ __html: renderMarkdown(description) }} />
                                         )}
                                     </div>
                                 </div>
                             </motion.div>
-                        </div>
+                        </section>
 
-                        <div className="bg-card/50 backdrop-blur-2xl border border-border/50 rounded-3xl p-4 sm:p-6 shadow-2xl">
+                        {/* 2. ДАТИ */}
+                        <section className="bg-card/50 backdrop-blur-2xl border border-border/50 rounded-3xl p-4 sm:p-6 shadow-2xl">
                             <EditSectionHeader title="Дати проведення" icon={Calendar} isOpen={openSections.dates} onClick={() => toggleSection('dates')} />
                             <motion.div initial={false} animate={{ height: openSections.dates ? 'auto' : 0 }} transition={{ duration: 0.3, ease: 'easeInOut' }} className="overflow-hidden">
                                 <div className="pt-4 grid sm:grid-cols-2 gap-6">
-                                    <div className="space-y-2"> <Label htmlFor="startDate">Дата початку *</Label> <Input id="startDate" type="datetime-local" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="rounded-2xl bg-secondary/50" /> </div>
-                                    <div className="space-y-2"> <Label htmlFor="endDate">Дата завершення *</Label> <Input id="endDate" type="datetime-local" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="rounded-2xl bg-secondary/50" /> </div>
+                                    <div className="space-y-2"> <Label htmlFor="startDate">Дата початку *</Label> <Input id="startDate" type="datetime-local" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="rounded-2xl bg-secondary/50 focus-visible:ring-primary" /> </div>
+                                    <div className="space-y-2"> <Label htmlFor="endDate">Дата завершення *</Label> <Input id="endDate" type="datetime-local" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="rounded-2xl bg-secondary/50 focus-visible:ring-primary" /> </div>
                                 </div>
                             </motion.div>
-                        </div>
+                        </section>
 
-                        <div className="bg-card/50 backdrop-blur-2xl border border-border/50 rounded-3xl p-4 sm:p-6 shadow-2xl">
+                        {/* 3. ТЕМИ ТА КРИТЕРІЇ */}
+                        <section className="bg-card/50 backdrop-blur-2xl border border-border/50 rounded-3xl p-4 sm:p-6 shadow-2xl">
                             <EditSectionHeader title="Теми та Критерії" icon={Code2} isOpen={openSections.criteria} onClick={() => toggleSection('criteria')} />
                             <motion.div initial={false} animate={{ height: openSections.criteria ? 'auto' : 0 }} transition={{ duration: 0.3, ease: 'easeInOut' }} className="overflow-hidden">
                                 <div className="pt-4 space-y-8">
+
                                     <div className="space-y-3">
                                         <Label htmlFor="themeInput">Теми (виберіть існуючі)</Label>
                                         <div className="relative">
-                                            <Input id="themeInput" placeholder="Fintech, AI, Web3..." value={themeInput} onChange={handleThemeInputChange} onFocus={() => setShowThemeSuggestions(true)} onBlur={() => setTimeout(() => setShowThemeSuggestions(false), 200)} disabled={isThemesLoading} className="rounded-2xl bg-secondary/50" />
+                                            <Input id="themeInput" placeholder="Fintech, AI, Web3..." value={themeInput} onChange={handleThemeInputChange} onFocus={() => setShowThemeSuggestions(true)} onBlur={() => setTimeout(() => setShowThemeSuggestions(false), 200)} disabled={isThemesLoading} className="rounded-2xl bg-secondary/50 focus-visible:ring-primary" />
                                             {showThemeSuggestions && themeInput.trim() && filteredThemeSuggestions.length > 0 && (
                                                 <div className="absolute z-20 w-full mt-1 bg-card border border-border/50 rounded-xl shadow-xl max-h-60 overflow-y-auto">
-                                                    {filteredThemeSuggestions.map((theme) => ( <button key={theme.id} type="button" onClick={() => handleAddTheme(theme)} className="w-full text-left p-3 hover:bg-secondary/50 transition-colors"> {theme.name} </button> ))}
+                                                    {filteredSuggestions.map((theme) => ( <button key={theme.id} type="button" onClick={() => handleAddTheme(theme)} className="w-full text-left p-3 hover:bg-secondary/50 transition-colors"> {theme.name} </button> ))}
                                                 </div>
                                             )}
+                                            {isThemesLoading && <Loading className="absolute right-3 top-1/2 -translate-y-1/2 size-4" />}
                                         </div>
                                         {selectedThemes.length > 0 && (
-                                            <div className="flex flex-wrap gap-2">
-                                                {selectedThemes.map((theme) => ( <Badge key={theme.id} className="bg-gradient-to-r from-primary/20 to-purple-600/20 border border-primary/30 pl-3 pr-2 py-1.5 gap-2"> {theme.name} <button type="button" onClick={() => handleRemoveTheme(theme.id)}><X className="size-3" /></button> </Badge> ))}
+                                            <div className="flex flex-wrap gap-2 pt-2">
+                                                {selectedThemes.map((theme) => (
+                                                    <Badge key={theme.id} className="bg-gradient-to-r from-primary/20 to-purple-600/20 border border-primary/30 pl-3 pr-2 py-1.5 gap-2 text-primary hover:scale-[1.02] transition-transform text-xs sm:text-sm">
+                                                        {theme.name}
+                                                        <button type="button" onClick={() => handleRemoveTheme(theme.id)} className="p-0.5 rounded-full hover:bg-white/20">
+                                                            <X className="size-3" />
+                                                        </button>
+                                                    </Badge>
+                                                ))}
                                             </div>
                                         )}
                                     </div>
+
                                     <div className="space-y-3">
                                         <Label htmlFor="newThemeInput">Додати нову тему (якщо немає в списку)</Label>
                                         <div className="flex gap-2">
-                                            <Input id="newThemeInput" placeholder="Наприклад: 'Green Energy'" value={newThemeInput} onChange={e => setNewThemeInput(e.target.value)} className="rounded-2xl bg-secondary/50" />
-                                            <Button type="button" variant="secondary" onClick={handleAddNewTheme} className="rounded-xl"><Plus className="size-4" /></Button>
+                                            <Input id="newThemeInput" placeholder="Наприклад: 'Green Energy'" value={newThemeInput} onChange={e => setNewThemeInput(e.target.value)} className="rounded-2xl bg-secondary/50 focus-visible:ring-cyan-500" />
+                                            <Button type="button" variant="secondary" onClick={handleAddNewTheme} className="rounded-xl bg-cyan-500/90 hover:bg-cyan-600/90 flex-shrink-0 p-3"><Plus className="size-4" /></Button> {/* Збільшена кнопка для мобільних */}
                                         </div>
                                         {newThemes.length > 0 && (
-                                            <div className="flex flex-wrap gap-2">
-                                                {newThemes.map((themeName) => ( <Badge key={themeName} className="bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 pl-3 pr-2 py-1.5 gap-2"> {themeName} <button type="button" onClick={() => handleRemoveNewTheme(themeName)}><X className="size-3" /></button> </Badge> ))}
+                                            <div className="flex flex-wrap gap-2 pt-2">
+                                                {newThemes.map((themeName) => (
+                                                    <Badge key={themeName} className="bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 pl-3 pr-2 py-1.5 gap-2 text-cyan-400 hover:scale-[1.02] transition-transform text-xs sm:text-sm">
+                                                        {themeName}
+                                                        <button type="button" onClick={() => handleRemoveNewTheme(themeName)} className="p-0.5 rounded-full hover:bg-white/20">
+                                                            <X className="size-3" />
+                                                        </button>
+                                                    </Badge>
+                                                ))}
                                             </div>
                                         )}
                                     </div>
+
+                                    {/* КРИТЕРІЇ ОЦІНЮВАННЯ (Оптимізовано для менших екранів) */}
                                     <div className="space-y-4">
-                                        <Label>Критерії Оцінювання</Label>
+                                        <Label className="font-semibold">Критерії Оцінювання ({ratingCategories.length})</Label>
                                         <div className="space-y-2">
                                             {ratingCategories.sort((a,b) => a.order - b.order).map((cat, index) => (
-                                                <div key={cat.id || `new-${index}`} className="flex gap-2 items-center">
-                                                    <Input placeholder="Назва критерію (н-д, Дизайн)" value={cat.name} onChange={(e) => handleCategoryChange(index, 'name', e.target.value)} className="rounded-xl bg-secondary/50" />
-                                                    <Input type="number" value={cat.order} onChange={(e) => handleCategoryChange(index, 'order', parseInt(e.target.value) || 0)} className="rounded-xl bg-secondary/50 w-20" />
-                                                    <Button type="button" variant="ghost" onClick={() => handleRemoveCategory(index)} className="rounded-xl hover:bg-destructive/20 hover:text-destructive"> <X className="size-4" /> </Button>
+                                                <div key={cat.id || `new-${index}`} className={`flex flex-col sm:flex-row gap-2 items-stretch sm:items-center p-2 rounded-xl transition-all ${cat.isNew ? 'bg-indigo-500/10' : 'bg-secondary/20'}`}>
+                                                    <Input
+                                                        placeholder="Назва критерію (н-д, Дизайн)"
+                                                        value={cat.name}
+                                                        onChange={(e) => handleCategoryChange(index, 'name', e.target.value)}
+                                                        className="rounded-xl bg-secondary/50 focus-visible:ring-indigo-500 flex-1"
+                                                    />
+                                                    <Input
+                                                        type="number"
+                                                        value={cat.order}
+                                                        onChange={(e) => handleCategoryChange(index, 'order', parseInt(e.target.value) || 0)}
+                                                        className="rounded-xl bg-secondary/50 w-full sm:w-20 text-center focus-visible:ring-indigo-500 flex-shrink-0"
+                                                    />
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        onClick={() => handleRemoveCategory(index)}
+                                                        className="rounded-xl hover:bg-destructive/20 hover:text-destructive p-2 sm:p-2.5 h-auto flex-shrink-0"
+                                                    >
+                                                        <X className="size-4" />
+                                                    </Button>
                                                 </div>
                                             ))}
                                         </div>
-                                        <div className="flex gap-2 p-3 bg-secondary/30 rounded-2xl border border-border/50">
-                                            <Input placeholder="Нова назва критерію" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} className="rounded-xl bg-background/50" />
-                                            <Input type="number" placeholder="Порядок" value={newCategoryOrder} onChange={(e) => setNewCategoryOrder(parseInt(e.target.value) || 1)} className="rounded-xl bg-background/50 w-24" />
-                                            <Button type="button" variant="secondary" onClick={handleAddCategory} className="rounded-xl bg-primary/90 hover:bg-primary"> <Plus className="size-4" /> Додати </Button>
+                                        <div className="flex flex-col sm:flex-row gap-2 p-3 bg-secondary/30 rounded-2xl border border-border/50">
+                                            <Input placeholder="Нова назва критерію" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} className="rounded-xl bg-background/50 focus-visible:ring-primary flex-1" />
+                                            <Input type="number" placeholder="Порядок" value={newCategoryOrder} onChange={(e) => setNewCategoryOrder(parseInt(e.target.value) || 1)} className="rounded-xl bg-background/50 w-full sm:w-24 text-center flex-shrink-0 focus-visible:ring-primary" />
+                                            <Button type="button" variant="secondary" onClick={handleAddCategory} disabled={!newCategoryName.trim()} className="rounded-xl bg-primary/90 hover:bg-primary flex-shrink-0 gap-1 p-3"> <Plus className="size-4" /> Додати </Button>
                                         </div>
                                     </div>
                                 </div>
                             </motion.div>
-                        </div>
+                        </section>
 
-                        <div className="bg-card/50 backdrop-blur-2xl border border-border/50 rounded-3xl p-4 sm:p-6 shadow-2xl">
+                        {/* 4. КОМАНДА (СУДДІ) */}
+                        <section className="bg-card/50 backdrop-blur-2xl border border-border/50 rounded-3xl p-4 sm:p-6 shadow-2xl">
                             <EditSectionHeader title="Команда (Судді)" icon={Users} isOpen={openSections.team} onClick={() => toggleSection('team')} />
                             <motion.div initial={false} animate={{ height: openSections.team ? 'auto' : 0 }} transition={{ duration: 0.3, ease: 'easeInOut' }} className="overflow-hidden">
                                 <div className="pt-4 space-y-6">
                                     <div className="space-y-3">
                                         <Label htmlFor="judgeEmail">Email судді</Label>
-                                        <div className="flex gap-2">
-                                            <div className="relative flex-1"> <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" /> <Input id="judgeEmail" placeholder="email@example.com" value={judgeEmail} onChange={(e) => setJudgeEmail(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleSearchJudge())} disabled={isSearchingJudge} className="rounded-2xl bg-secondary/50 pl-10" /> </div>
-                                            <Button type="button" variant="secondary" onClick={handleSearchJudge} disabled={isSearchingJudge || !judgeEmail.trim()} className="flex rounded-xl items-center justify-center hover:scale-105 bg-primary/90 hover:bg-primary gap-2 w-28"> {isSearchingJudge ? <Loading /> : <UserPlus className="size-4" />} {isSearchingJudge ? 'Пошук...' : 'Знайти'} </Button>
+                                        <div className="flex flex-col sm:flex-row gap-2"> {/* Адаптований пошук */}
+                                            <div className="relative flex-1">
+                                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                                                <Input
+                                                    id="judgeEmail"
+                                                    placeholder="email@example.com"
+                                                    value={judgeEmail}
+                                                    onChange={(e) => setJudgeEmail(e.target.value)}
+                                                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleSearchJudge())}
+                                                    disabled={isSearchingJudge}
+                                                    className="rounded-2xl bg-secondary/50 pl-10 focus-visible:ring-primary h-12"
+                                                />
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                variant="secondary"
+                                                onClick={handleSearchJudge}
+                                                disabled={isSearchingJudge || !judgeEmail.trim()}
+                                                className="flex rounded-xl items-center justify-center bg-primary/90 hover:bg-primary gap-2 w-full sm:w-28 flex-shrink-0 h-12"
+                                            >
+                                                {isSearchingJudge ? <Loading className="size-4 animate-spin" /> : <UserPlus className="size-4" />}
+                                                {isSearchingJudge ? 'Пошук...' : 'Знайти'}
+                                            </Button>
                                         </div>
                                         <div className="min-h-[70px] pt-2">
                                             {searchedUser && (
-                                                <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-2xl border border-primary/30 shadow-md">
-                                                    <div className="flex items-center gap-3"> <Avatar className="size-10"> <AvatarImage src={searchedUser.avatarUrl} alt={searchedUser.name} /> <AvatarFallback>{searchedUser.name?.charAt(0) || 'U'}</AvatarFallback> </Avatar> <div> <p className="truncate">{searchedUser.name}</p> <p className="text-sm text-muted-foreground truncate">{searchedUser.email}</p> </div> </div>
-                                                    <Button type="button" onClick={handleAddJudge} disabled={judges.some(c => c.id === searchedUser.id)} className="rounded-xl flex-shrink-0 bg-green-500/90 hover:bg-green-600/90 gap-1"> <Plus className="size-4" /> {judges.some(c => c.id === searchedUser.id) ? 'Додано' : 'Додати'} </Button>
+                                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 bg-secondary/50 rounded-2xl border border-primary/30 shadow-md gap-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <Avatar className="size-10">
+                                                            <AvatarImage src={searchedUser.avatarUrl} alt={searchedUser.name} />
+                                                            <AvatarFallback>{searchedUser.name?.charAt(0) || 'U'}</AvatarFallback>
+                                                        </Avatar>
+                                                        <div className="min-w-0">
+                                                            <p className="truncate font-medium">{searchedUser.name}</p>
+                                                            <p className="text-sm text-muted-foreground truncate">{searchedUser.email}</p>
+                                                        </div>
+                                                    </div>
+                                                    <Button
+                                                        type="button"
+                                                        onClick={handleAddJudge}
+                                                        disabled={judges.some(c => c.id === searchedUser.id)}
+                                                        className="rounded-xl flex-shrink-0 bg-green-500/90 hover:bg-green-600/90 gap-1 w-full sm:w-auto justify-center p-3"
+                                                    >
+                                                        {judges.some(c => c.id === searchedUser.id) ?
+                                                            <><Check className="size-4" /> Додано</> :
+                                                            <><Plus className="size-4" /> Додати</>
+                                                        }
+                                                    </Button>
                                                 </div>
                                             )}
                                             {!isSearchingJudge && userLookupError && judgeEmail.trim() && ( <p className="text-sm text-destructive mt-2">Користувача з такою поштою не знайдено.</p> )}
                                         </div>
                                     </div>
+
                                     {judges.length > 0 && (
-                                        <div className="space-y-3"> <Label>Призначені судді ({judges.length})</Label> <div className="space-y-2"> {judges.map((judge) => ( <div key={judge.id} className="flex items-center gap-3 p-3 bg-secondary/50 rounded-2xl border border-border/50"> <Avatar className="size-10"> <AvatarImage src={judge.avatar} alt={judge.name} /> <AvatarFallback> {judge.name?.charAt(0)?.toUpperCase() || 'U'} </AvatarFallback> </Avatar> <div className="flex-1 min-w-0"> <p className="truncate">{judge.name}</p> <p className="text-sm text-muted-foreground truncate">{judge.email}</p> </div> <Button type="button" variant="ghost" onClick={() => handleRemoveJudge(judge.id)} className="rounded-xl hover:bg-destructive/20 hover:text-destructive flex-shrink-0"> <X className="size-4" /> </Button> </div> ))} </div> </div>
+                                        <div className="space-y-3">
+                                            <Label>Призначені судді ({judges.length})</Label>
+                                            <div className="space-y-2">
+                                                {judges.map((judge) => (
+                                                    <div key={judge.id} className="flex items-center gap-3 p-3 bg-secondary/50 rounded-2xl border border-border/50 transition-shadow hover:shadow-lg">
+                                                        <Avatar className="size-10">
+                                                            <AvatarImage src={judge.avatar} alt={judge.name} />
+                                                            <AvatarFallback> {judge.name?.charAt(0)?.toUpperCase() || 'U'} </AvatarFallback>
+                                                        </Avatar>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="truncate font-medium">{judge.name}</p>
+                                                            <p className="text-sm text-muted-foreground truncate">{judge.email}</p>
+                                                        </div>
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            onClick={() => handleRemoveJudge(judge.id)}
+                                                            className="rounded-xl hover:bg-destructive/20 hover:text-destructive flex-shrink-0 p-2 h-auto"
+                                                        >
+                                                            <X className="size-4" />
+                                                        </Button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
                             </motion.div>
-                        </div>
+                        </section>
 
-                        <div className="bg-card/50 backdrop-blur-2xl border border-border/50 rounded-3xl p-4 sm:p-6 shadow-2xl">
+                        {/* 5. ПРАВИЛА ОЦІНЮВАННЯ */}
+                        <section className="bg-card/50 backdrop-blur-2xl border border-border/50 rounded-3xl p-4 sm:p-6 shadow-2xl">
                             <EditSectionHeader title="Правила Оцінювання" icon={Star} isOpen={openSections.rules} onClick={() => toggleSection('rules')} />
                             <motion.div initial={false} animate={{ height: openSections.rules ? 'auto' : 0 }} transition={{ duration: 0.3, ease: 'easeInOut' }} className="overflow-hidden">
-                                <div className="pt-4 space-y-6">
-                                    <div className="flex items-center justify-between p-4 bg-secondary/30 rounded-2xl border border-border/50">
-                                        <div> <Label htmlFor="allowParticipantRating" className="font-semibold">Дозволити учасникам оцінювати</Label> <p className="text-sm text-muted-foreground">Дозволяє учасникам ставити оцінки проектам.</p> </div>
-                                        <Switch id="allowParticipantRating" checked={allowParticipantRating} onCheckedChange={setAllowParticipantRating} />
+                                <div className="pt-4 space-y-4">
+                                    {/* ... (Switches) ... */}
+                                    <div className="flex items-center justify-between p-4 bg-secondary/30 rounded-2xl border border-border/50 hover:border-primary/50 transition-colors">
+                                        <div className="space-y-0.5">
+                                            <Label htmlFor="allowParticipantRating" className="font-semibold">Дозволити учасникам оцінювати</Label>
+                                            <p className="text-sm text-muted-foreground">Дозволяє учасникам ставити оцінки проектам, окрім своїх.</p>
+                                        </div>
+                                        <Switch id="allowParticipantRating" checked={allowParticipantRating} onCheckedChange={setAllowParticipantRating} className="flex-shrink-0" />
                                     </div>
-                                    <div className="flex items-center justify-between p-4 bg-secondary/30 rounded-2xl border border-border/50">
-                                        <div> <Label htmlFor="allowPublicRating" className="font-semibold">Дозволити глядачам оцінювати</Label> <p className="text-sm text-muted-foreground">Дозволяє будь-яким користувачам (не учасникам) ставити оцінки.</p> </div>
-                                        <Switch id="allowPublicRating" checked={allowPublicRating} onCheckedChange={setAllowPublicRating} />
+                                    <div className="flex items-center justify-between p-4 bg-secondary/30 rounded-2xl border border-border/50 hover:border-primary/50 transition-colors">
+                                        <div className="space-y-0.5">
+                                            <Label htmlFor="allowPublicRating" className="font-semibold">Дозволити глядачам оцінювати</Label>
+                                            <p className="text-sm text-muted-foreground">Дозволяє будь-яким авторизованим користувачам (не суддям/учасникам) ставити оцінки.</p>
+                                        </div>
+                                        <Switch id="allowPublicRating" checked={allowPublicRating} onCheckedChange={setAllowPublicRating} className="flex-shrink-0" />
                                     </div>
                                 </div>
                             </motion.div>
-                        </div>
+                        </section>
 
+                        {/* КНОПКА "Зберегти" для мобільних (змінена для кращого вигляду) */}
+                        <div className="pb-8 pt-4 lg:hidden">
+                            <Button
+                                type="button"
+                                onClick={handleSubmit}
+                                disabled={isUpdating || !canSubmit}
+                                className="rounded-xl flex items-center gap-2 py-3 px-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-500/90 hover:to-emerald-600/90 shadow-lg shadow-green-500/30 disabled:opacity-60 w-full justify-center text-lg"
+                            >
+                                {isUpdating ? <Loading className="size-5 animate-spin" /> : <Check className="size-5" />}
+                                {isUpdating ? 'Оновлення...' : 'Зберегти зміни'}
+                            </Button>
+                        </div>
                     </div>
 
                     <div className="lg:block hidden">

@@ -6,7 +6,7 @@ import {Badge} from "../../../components/badge.tsx";
 
 import {
     ArrowLeft,
-    Check, // <--- Додано Check
+    Check,
     ChevronRight,
     FileText,
     Rocket,
@@ -119,40 +119,55 @@ function CreateHackathonLayout() {
     return (
         <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-cyan-500/10" />
-            <div className="absolute top-20 right-20 size-96 bg-primary/20 rounded-full blur-3xl" />
-            <div className="absolute bottom-20 left-20 size-96 bg-cyan-500/10 rounded-full blur-3xl" />
-            <div className="absolute top-1/3 left-1/3 size-96 bg-pink-500/10 rounded-full blur-3xl" />
-            <Button variant={"glass"} type={"button"} className={"absolute top-6 left-6 z-50"} onClick={() => navigate('/')}>Back to Home</Button>
 
-            {/* Хедер з прогресом */}
+            <div className="absolute top-10 right-10 size-56 md:top-20 md:right-20 md:size-96 bg-primary/20 rounded-full blur-3xl z-0" />
+            <div className="absolute bottom-10 left-10 size-56 md:bottom-20 md:left-20 md:size-96 bg-cyan-500/10 rounded-full blur-3xl z-0" />
+            <div className="absolute top-1/3 left-1/3 size-56 md:size-96 bg-pink-500/10 rounded-full blur-3xl z-0" />
+
+
             <div className="fixed top-0 left-0 right-0 z-40 bg-card/80 backdrop-blur-xl border-b border-border/50">
-                <div className="container mx-auto px-4 py-4">
-                    <div className="flex items-center justify-between mb-2">
+                <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+
+
+                    <div className="flex items-center gap-3">
+                        <Button
+                            variant="glass"
+                            type="button"
+                            onClick={() => navigate('/')}
+                            className="flex items-center gap-2 rounded-xl px-3 py-2 md:px-4 md:py-3"
+                        >
+                            <ArrowLeft className="size-5" />
+                            <span className="hidden md:inline">Вернутись</span>
+                        </Button>
+
                         <div className="flex items-center gap-3">
-                            <div className="size-10 bg-gradient-to-br from-primary to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-primary/30">
-                                <Trophy className="size-6 text-white" />
+                            <div className="size-9 sm:size-10 bg-gradient-to-br from-primary to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-primary/30">
+                                <Trophy className="size-5 sm:size-6 text-white" />
                             </div>
                             <div>
-                                <h2 className="text-sm">Створення хакатону</h2>
-                                <p className="text-xs text-muted-foreground">
+                                <h2 className="text-xs sm:text-sm">Створення хакатону</h2>
+                                <p className="text-[10px] sm:text-xs text-muted-foreground">
                                     Крок {currentStepIndex + 1} з {steps.length}
                                 </p>
                             </div>
                         </div>
-                        <Badge className="bg-primary/10 text-primary border-primary/30">
+                    </div>
+
+                    <div className="flex flex-col items-end sm:items-center gap-1 sm:gap-2">
+                        <Badge className="bg-primary/10 text-primary border-primary/30 text-[10px] sm:text-xs px-2 py-1 sm:px-3 sm:py-1.5">
                             {Math.round(progress)}% завершено
                         </Badge>
+                        <Progress value={progress} className="h-1.5 sm:h-2 w-32 sm:w-48" />
                     </div>
-                    <Progress value={progress} className="h-2" />
                 </div>
             </div>
 
-            {/* Main Content */}
+
             <div className="relative min-h-screen px-4 py-24 pt-32">
                 <div className="max-w-7xl mx-auto">
                     <div className="grid lg:grid-cols-[300px_1fr] gap-8">
 
-                        {/* Sidebar (ЗАПОВНЕНО) */}
+
                         <div className="hidden lg:block">
                             <div className="sticky top-32 bg-card/50 backdrop-blur-2xl border border-border/50 rounded-3xl p-6 shadow-2xl">
                                 <h3 className="mb-6">Прогрес створення</h3>
@@ -254,13 +269,13 @@ function CreateHackathonLayout() {
                             <div className="flex-1">
                                 <CurrentStepComponent />
                             </div>
-                            <div className="flex items-center justify-between pt-6 mt-6 border-t border-border/50">
+                            <div className="flex flex-col-reverse sm:flex-row items-center justify-between pt-6 mt-6 border-t border-border/50 gap-3">
                                 <Button
                                     type="button"
                                     variant="ghost"
                                     onClick={handlePrevStep}
                                     disabled={currentStepIndex === 0 || isSubmitting}
-                                    className="rounded-xl flex gap-8 hover:scale-10 py-4 bg-secondary/50 border-border/50 hover:bg-secondary/70 disabled:opacity-50"
+                                    className="rounded-xl flex w-full sm:w-auto justify-center sm:gap-8 py-4 bg-secondary/50 border-border/50 hover:bg-secondary/70 disabled:opacity-50"
                                 >
                                     <ArrowLeft className="size-6 mr-2" />
                                     Назад
@@ -271,7 +286,7 @@ function CreateHackathonLayout() {
                                         type="button"
                                         onClick={handleSubmit}
                                         disabled={isSubmitting}
-                                        className="rounded-xl bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 shadow-xl shadow-primary/30 gap-2"
+                                        className="rounded-xl w-full sm:w-auto bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 shadow-xl shadow-primary/30 gap-2"
                                     >
                                         <Rocket className="size-4" />
                                         {isSubmitting ? "Публікація..." : "Опублікувати хакатон"}
@@ -281,7 +296,7 @@ function CreateHackathonLayout() {
                                         type="button"
                                         onClick={handleNextStep}
                                         disabled={!canProceed()}
-                                        className="rounded-xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 disabled:opacity-50"
+                                        className="rounded-xl w-full sm:w-auto bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 disabled:opacity-50"
                                     >
                                         Далі
                                         <ChevronRight className="size-6 ml-2" />

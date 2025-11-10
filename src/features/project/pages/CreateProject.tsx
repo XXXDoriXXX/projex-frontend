@@ -24,7 +24,7 @@ import {
     Rocket, Star, Upload,
     UserPlus,
     Users,
-    Video, X
+    Video, X, Trophy
 } from "lucide-react";
 import {useCreateProjectMutation, useGetTechnologiesQuery} from "../api/projectApi.ts";
 import Loading from "../../../components/Loading.tsx";
@@ -73,6 +73,28 @@ interface SelectedTechnology {
     id: string;
     name: string;
 }
+
+const isValidUrl = (url: string) => {
+    if (!url) return true;
+    try {
+        new URL(url);
+        return true;
+    } catch (e) {
+        return false;
+    }
+};
+const GITHUB_REGEX = /^https?:\/\/(www\.)?github\.com\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_.-]+(\/.*)?$/i;
+const isGitHubUrlValid = (url: string) => {
+    if (!url) return true;
+    return GITHUB_REGEX.test(url);
+};
+
+const PROJECT_NAME_MIN_LENGTH = 3;
+const PROJECT_NAME_MAX_LENGTH = 50;
+const DESCRIPTION_MIN_LENGTH = 10;
+const DESCRIPTION_MAX_LENGTH = 5000;
+
+
 export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
     const [currentStep, setCurrentStep] = useState<ProjectStep>('basics');
     const [projectName, setProjectName] = useState('');
@@ -89,7 +111,8 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
     const [showDismissableError, setShowDismissableError] = useState(false);
     const currentStepIndex = steps.findIndex(s => s.id === currentStep);
     const progress = ((currentStepIndex + 1) / steps.length) * 100;
-    const userId = useSelector((state: RootState) => state.auth.user?.id || 'TEST_USER_ID');
+    const currentUserId = useSelector((state: RootState) => state.auth.user?.id);
+    const userId = currentUserId || 'TEST_USER_ID';
     const [selectedTechnologies, setSelectedTechnologies] = useState<SelectedTechnology[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const { data: allTechnologies = [], isLoading: isTechLoading } = useGetTechnologiesQuery();
@@ -101,6 +124,10 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
     const imageInputRef = useRef<HTMLInputElement>(null);
     const [newlyCreatedProjectId, setNewlyCreatedProjectId] = useState<string | null>(null);
     const videoInputRef = useRef<HTMLInputElement>(null);
+
+    const [linkErrors, setLinkErrors] = useState<{ github: string | null; demo: string | null }>({ github: null, demo: null });
+    const linkValidationPassed = !linkErrors.github && !linkErrors.demo;
+
     const handleAddTechnology = (tech: SelectedTechnology) => {
         if (!selectedTechnologies.find(t => t.id === tech.id)) {
             setSelectedTechnologies([...selectedTechnologies, tech]);
@@ -108,7 +135,6 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
             setShowSuggestions(false);
         }
     };
-    const currentUserId = useSelector((state: RootState) => state.auth.user?.id);
     const updateProgress = (fileId: string, progress: number) => {
         setMediaFiles(prev => prev.map(f => f.id === fileId ? { ...f, uploadProgress: progress, uploadError: false } : f));
     };
@@ -121,13 +147,19 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
         setShowSuggestions(true);
     };
     const handleAddCollaborator = () => {
+        if (!searchedUser) return;
 
-        if (foundUser && !collaborators.find(c => c.id === foundUser.id)) {
+        if (currentUserId && searchedUser.id === currentUserId) {
+            alert('Ви не можете додати себе як співавтора.');
+            return;
+        }
+
+        if (searchedUser && !collaborators.find(c => c.id === searchedUser.id)) {
             const newCollaborator: Collaborator = {
-                id: foundUser.id,
-                name: foundUser.name,
-                email: foundUser.email,
-                avatar: foundUser.avatarUrl,
+                id: searchedUser.id,
+                name: searchedUser.name,
+                email: searchedUser.email,
+                avatar: searchedUser.avatarUrl,
             };
             setCollaborators([...collaborators, newCollaborator]);
             setCollaboratorEmail('');
@@ -138,12 +170,14 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
         const email = collaboratorEmail.trim();
         if (email) {
             setIsSearching(true);
+            setSearchedUser(null);
             lookupUser(email);
         }
     };
+
     useEffect(() => {
-        if(!currentUserId){
-            //navigate("/")
+        if (!currentUserId) {
+            // navigate("/") - Розкоментуйте, якщо потрібен редирект
         }
         if (!isFetching) {
             setIsSearching(false);
@@ -154,7 +188,8 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                 setSearchedUser(null);
             }
         }
-    }, [isFetching, foundUser, isError, error]);
+    }, [isFetching, foundUser, isError, error, currentUserId]);
+
     const filteredSuggestions = React.useMemo(() => {
         const input = techInput.toLowerCase();
 
@@ -174,24 +209,31 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
         return sortedResults.slice(0, 5);
 
     }, [techInput, allTechnologies, selectedTechnologies]);
+
     let [
         createProject,
         { isLoading: isSubmitting, isError: submitError, isSuccess: submitSuccess, error: submitErrorData }
     ] = useCreateProjectMutation();
+
     const handleAddGithubLink = () => {
         setGithubLinks([...githubLinks, '']);
     };
+
     const handleDismissError = () => {
         setShowDismissableError(false);
     };
+
     useEffect(() => {
         if (submitError) {
             setShowDismissableError(true);
         }
     }, [submitError]);
+
     const handleRemoveGithubLink = (index: number) => {
         if (githubLinks.length > 1) {
-            setGithubLinks(githubLinks.filter((_, i) => i !== index));
+            const newLinks = githubLinks.filter((_, i) => i !== index);
+            setGithubLinks(newLinks);
+            validateLinks(newLinks, deploymentLink);
         }
     };
 
@@ -199,7 +241,48 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
         const newLinks = [...githubLinks];
         newLinks[index] = value;
         setGithubLinks(newLinks);
+        validateLinks(newLinks, deploymentLink);
     };
+
+    const handleDeploymentLinkChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setDeploymentLink(value);
+        validateLinks(githubLinks, value);
+    };
+
+    const validateLinks = (ghLinks: string[], demoLink: string) => {
+        let ghError: string | null = null;
+        const nonBlankGhLinks = ghLinks.filter(l => l.trim());
+
+        for (const link of nonBlankGhLinks) {
+            if (!isGitHubUrlValid(link)) {
+                ghError = 'Некоректне посилання на GitHub. Потрібен повний URL.';
+                break;
+            }
+        }
+
+        let demoError: string | null = null;
+        if (demoLink.trim() && !isValidUrl(demoLink)) {
+            demoError = 'Некоректний URL для опублікованого проекту.';
+        }
+
+        setLinkErrors({ github: ghError, demo: demoError });
+    };
+
+    const handleDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const value = e.target.value;
+        if (value.length <= DESCRIPTION_MAX_LENGTH) {
+            setDescription(value);
+        }
+    };
+
+
+    const handleProjectNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        if (value.length <= PROJECT_NAME_MAX_LENGTH) {
+            setProjectName(value);
+        }
+    }
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {
         const files = e.target.files;
@@ -210,9 +293,8 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
 
         const file = files[0];
 
-        // Створюємо клієнтський ID та тимчасовий URL
         const clientId = Date.now().toString();
-        const tempUrl = URL.createObjectURL(file); // Для локального прев'ю
+        const tempUrl = URL.createObjectURL(file);
 
         const newFile: MediaFile = {
             id: clientId,
@@ -226,38 +308,46 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
             uploadError: false
         };
 
-        // 1. Додаємо файл до списку
         setMediaFiles(prev => [...prev, newFile]);
 
         try {
-            // 2. Викликаємо реальну функцію завантаження
             const result = await uploadMediaToServer(file, token, (progress) => {
                 updateProgress(clientId, progress);
             });
+            setMediaFiles(prev => prev.map(f => {
+                if (f.id === clientId) {
 
-            // 3. Оновлюємо фінальний стан: completed, зберігаємо ServerID
-            setMediaFiles(prev => prev.map(f => f.id === clientId
-                ? {
-                    ...f,
-                    serverId: result.id,
-                    isUploading: false,
-                    uploadProgress: 100,
-                    url: result.url // Використовуємо фінальний URL від сервера
+                    URL.revokeObjectURL(f.url);
+                    return {
+                        ...f,
+                        serverId: result.id,
+                        isUploading: false,
+                        uploadProgress: 100,
+                        url: result.url
+                    };
                 }
-                : f
-            ));
+                return f;
+            }));
         } catch (error) {
             console.error("Media upload error:", error);
-            // 4. Обробка помилки
-            setMediaFiles(prev => prev.map(f => f.id === clientId
-                ? { ...f, isUploading: false, uploadProgress: 0, uploadError: true }
-                : f
-            ));
-        } finally {
-            // 5. Очищаємо тимчасовий URL, щоб запобігти витоку пам'яті
-            URL.revokeObjectURL(tempUrl);
-        }
-    };
+
+            setMediaFiles(prev =>
+                prev.map(f => {
+                    if (f.id === clientId) {
+                        URL.revokeObjectURL(f.url);
+                        return {
+                            ...f,
+                            isUploading: false,
+                            uploadProgress: 0,
+                            uploadError: true,
+                            serverId: undefined,
+                        };
+                    }
+                    return f;
+                })
+            );
+        };
+    }
 
     const handleSetMainImage = (id: string) => {
         setMediaFiles(mediaFiles.map(file => ({
@@ -267,9 +357,20 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
     };
 
     const handleRemoveMedia = (id: string) => {
+        const fileToRemove = mediaFiles.find(f => f.id === id);
+        if (fileToRemove && fileToRemove.url) {
+            URL.revokeObjectURL(fileToRemove.url);
+        }
+
         const updatedFiles = mediaFiles.filter(file => file.id !== id);
         if (updatedFiles.length > 0 && mediaFiles.find(f => f.id === id)?.isMain) {
-            updatedFiles[0].isMain = true;
+
+            const nextMainImage = updatedFiles.find(f => f.type === 'image');
+            if(nextMainImage) {
+                nextMainImage.isMain = true;
+            } else {
+                updatedFiles[0].isMain = true;
+            }
         }
         setMediaFiles(updatedFiles);
     };
@@ -280,6 +381,8 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
     };
 
     const handleNextStep = () => {
+        if (!canProceed()) return;
+
         const currentIndex = steps.findIndex(s => s.id === currentStep);
         if (currentIndex < steps.length - 1) {
             setCurrentStep(steps[currentIndex + 1].id);
@@ -315,31 +418,45 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
 
     const canProceed = () => {
         const allMediaUploaded = mediaFiles.every(f => f.uploadProgress === 100 && !f.uploadError);
+        const linkValidationPassed = !linkErrors.github && !linkErrors.demo;
+
+        const isProjectNameValid = projectName.length >= PROJECT_NAME_MIN_LENGTH && projectName.length <= PROJECT_NAME_MAX_LENGTH;
+        const isDescriptionValid = description.length >= DESCRIPTION_MIN_LENGTH && description.length <= DESCRIPTION_MAX_LENGTH;
+
+
         switch (currentStep) {
             case 'basics':
-                return projectName.trim() !== '';
+                return isProjectNameValid;
             case 'media':
-                return allMediaUploaded; // Optional
+
+                return allMediaUploaded;
             case 'links':
-                return true; // Optional
+                return linkValidationPassed;
             case 'details':
-                return description.trim() !== '';
+                return isDescriptionValid;
             case 'team':
-                return true; // Optional
+                return true;
+            case 'review':
+
+                return isProjectNameValid && isDescriptionValid && linkValidationPassed && allMediaUploaded;
             default:
                 return true;
         }
     };
 
     useEffect(() => {
-        if (submitSuccess && !isSubmitting) {
+        if (submitSuccess && !isSubmitting && newlyCreatedProjectId) {
             navigate(`/project/view/${newlyCreatedProjectId}`);
         }
-    }, [submitSuccess, isSubmitting, navigate, userId]);
+    }, [submitSuccess, isSubmitting, navigate, newlyCreatedProjectId]);
+
     const projectData = useMemo(() => {
         const uploadedMediaIds = mediaFiles
             .filter(f => f.serverId)
             .map(f => f.serverId!);
+
+        const previewImageId = mediaFiles.find(f => f.isMain && f.type === 'image' && f.serverId)?.serverId;
+
         return {
             userId: userId,
             title: projectName,
@@ -349,60 +466,96 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
             technologies: selectedTechnologies.map(tech => tech.id),
             mediaIds: uploadedMediaIds,
             subauthorIds: collaborators.map(c => c.id),
-            previewId: mediaFiles.find(f => f.isMain && f.serverId)?.serverId || null,
+            previewId: previewImageId || null, // Встановлюємо ID лише зображення
             visible: visibility === 'public' ? null : 'PRIVATE'
-
         };
     }, [
         userId, projectName, description, githubLinks, deploymentLink,
-        selectedTechnologies, mediaFiles
+        selectedTechnologies, mediaFiles, collaborators, visibility
     ]);
-    const handleSubmit = async () => {
-        try {
-            const result = await createProject(projectData).unwrap();
 
-            // 2. Зберігаємо ID нового проєкту у стані
-            const newProjectId = result.data.id;
-            setNewlyCreatedProjectId(newProjectId);
+    const handleSubmit = async () => {
+        if (!canProceed()) {
+            alert("Будь ласка, перевірте, чи всі обов'язкові поля заповнені та валідація пройдена.");
+            return;
+        }
+        try {
+
+            const result = await createProject(projectData).unwrap();
+            let newProjectId: string | undefined;
+
+            if (result && typeof result === 'object') {
+                newProjectId = result.id;
+                if (!newProjectId && (result as any).data) {
+                    newProjectId = (result as any).data.id;
+                }
+            }
+
+            if (newProjectId) {
+                setNewlyCreatedProjectId(newProjectId);
+            } else {
+                console.error("Помилка: ID нового проєкту не знайдено у відповіді API", result);
+                alert("Проєкт створено, але не вдалося отримати ID для перенаправлення.");
+            }
+
         } catch (error) {
-            // Помилка буде оброблена в submitErrorData
             console.error("Submission failed:", error);
         }
     };
+
+    const isCollaboratorTheAuthor = searchedUser && currentUserId && searchedUser.id === currentUserId;
+    const isProjectNameTooShort = projectName.length > 0 && projectName.length < PROJECT_NAME_MIN_LENGTH;
+    const isProjectNameTooLong = projectName.length > PROJECT_NAME_MAX_LENGTH;
+    const isDescriptionTooShort = description.length > 0 && description.length < DESCRIPTION_MIN_LENGTH;
+    const isDescriptionTooLong = description.length > DESCRIPTION_MAX_LENGTH;
+
+
     return (
         <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-cyan-500/10" />
-            <div className="absolute top-20 right-20 size-96 bg-primary/20 rounded-full blur-3xl" />
-            <div className="absolute bottom-20 left-20 size-96 bg-cyan-500/10 rounded-full blur-3xl" />
-            <div className="absolute top-1/3 left-1/3 size-96 bg-pink-500/10 rounded-full blur-3xl" />
-            <Button variant={"glass"} type={"submit"} className={"absolute top-6 left-6 z-50"}>Back to Home</Button>
+            <div className="absolute top-10 right-10 size-56 md:top-20 md:right-20 md:size-96 bg-primary/20 rounded-full blur-3xl z-0" />
+            <div className="absolute bottom-10 left-10 size-56 md:bottom-20 md:left-20 md:size-96 bg-cyan-500/10 rounded-full blur-3xl z-0" />
+            <div className="absolute top-1/3 left-1/3 size-56 md:size-96 bg-pink-500/10 rounded-full blur-3xl z-0" />
             <div className="fixed top-0 left-0 right-0 z-40 bg-card/80 backdrop-blur-xl border-b border-border/50">
-                <div className="container mx-auto px-4 py-4">
-                    <div className="flex items-center justify-between mb-2">
+                <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+
+
+                    <div className="flex items-center gap-3">
+                        <Button
+                            variant="glass"
+                            type="button"
+                            onClick={() => navigate('/')}
+                            className="flex items-center gap-2 rounded-xl px-3 py-2 md:px-4 md:py-3"
+                        >
+                            <ArrowLeft className="size-5" />
+                            <span className="hidden md:inline">Вернутись</span>
+                        </Button>
+
                         <div className="flex items-center gap-3">
-                            <div className="size-10 bg-gradient-to-br from-primary to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-primary/30">
-                                <Code2 className="size-6 text-white" />
+                            <div className="size-9 sm:size-10 bg-gradient-to-br from-primary to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-primary/30">
+                                <Trophy className="size-5 sm:size-6 text-white" />
                             </div>
                             <div>
-                                <h2 className="text-sm">Створення проекту</h2>
-                                <p className="text-xs text-muted-foreground">
+                                <h2 className="text-xs sm:text-sm">Створення проєкту</h2>
+                                <p className="text-[10px] sm:text-xs text-muted-foreground">
                                     Крок {currentStepIndex + 1} з {steps.length}
                                 </p>
                             </div>
                         </div>
-                        <Badge className="bg-primary/10 text-primary border-primary/30">
+                    </div>
+
+                    <div className="flex flex-col items-end sm:items-center gap-1 sm:gap-2">
+                        <Badge className="bg-primary/10 text-primary border-primary/30 text-[10px] sm:text-xs px-2 py-1 sm:px-3 sm:py-1.5">
                             {Math.round(progress)}% завершено
                         </Badge>
+                        <Progress value={progress} className="h-1.5 sm:h-2 w-32 sm:w-48" />
                     </div>
-                    <Progress value={progress} className="h-2" />
                 </div>
             </div>
-            {/* Main Content */}
-            <div className="relative min-h-screen px-4 py-24 pt-32">
+            <div className="relative min-h-screen px-3 py-20 pt-28 sm:px-6 sm:pt-32">
                 <div className="max-w-7xl mx-auto">
-                    <div className="grid lg:grid-cols-[300px_1fr] gap-8">
+                    <div className="flex flex-col lg:grid lg:grid-cols-[300px_1fr] gap-6">
 
-                        {/* Timeline Sidebar */}
                         <div className="hidden lg:block">
                             <div className="sticky top-32 bg-card/50 backdrop-blur-2xl border border-border/50 rounded-3xl p-6 shadow-2xl">
                                 <h3 className="mb-6">Прогрес створення</h3>
@@ -459,7 +612,6 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                             </div>
                         </div>
 
-                        {/* Mobile Step Indicator */}
                         <div className="lg:hidden mb-6">
                             <div className="bg-card/50 backdrop-blur-2xl border border-border/50 rounded-2xl p-4">
                                 <div className="flex items-center gap-3 mb-3">
@@ -494,25 +646,25 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                             </div>
                         </div>
 
-                        {/* Step Content */}
+
                         <div className="bg-card/50 backdrop-blur-2xl border border-border/50 rounded-3xl p-8 shadow-2xl min-h-[600px] flex flex-col">
-                            {/* Відображення помилок та завантаження */}
+
                             {isSubmitting && <Loading fullScreen text="Публікація проекту..." />}
+
                             {(submitError || showDismissableError) && (
                                 <ErrorMessage
                                     fullScreen
                                     title="Помилка публікації"
                                     message={(submitErrorData as any)?.data?.message || "Не вдалося створити проект. Спробуйте пізніше."}
-
                                     onDismiss={handleDismissError}
                                     onRetry={() => {
                                         handleDismissError();
-                                        createProject(projectData);
+                                        handleSubmit();
                                     }}
                                 />
                             )}
                             <div className="flex-1">
-                                {/* Step 1: Basics */}
+
                                 {currentStep === 'basics' && (
                                     <div className="space-y-6 animate-in fade-in duration-500">
                                         <div className="flex items-center gap-3 mb-6">
@@ -530,11 +682,22 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                             <Input
                                                 id="projectName"
                                                 type="text"
-                                                placeholder="Моя крута ідея..."
+                                                placeholder={`Назва (від ${PROJECT_NAME_MIN_LENGTH} до ${PROJECT_NAME_MAX_LENGTH} символів)...`}
                                                 value={projectName}
-                                                onChange={(e) => setProjectName(e.target.value)}
-                                                className="rounded-2xl bg-secondary/50 backdrop-blur-sm border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                                onChange={handleProjectNameChange}
+                                                className={`rounded-2xl bg-secondary/50 backdrop-blur-sm focus:ring-2 focus:ring-primary/20 ${
+                                                    (isProjectNameTooShort || isProjectNameTooLong) ? 'border-destructive focus:border-destructive' : 'border-border/50 focus:border-primary'
+                                                }`}
                                             />
+                                            {(isProjectNameTooShort || isProjectNameTooLong) ? (
+                                                <p className="text-sm text-destructive">
+                                                    Назва має бути від {PROJECT_NAME_MIN_LENGTH} до {PROJECT_NAME_MAX_LENGTH} символів. Поточна довжина: {projectName.length}.
+                                                </p>
+                                            ) : (
+                                                <p className="text-sm text-muted-foreground">
+                                                    {projectName.length}/{PROJECT_NAME_MAX_LENGTH}
+                                                </p>
+                                            )}
                                         </div>
 
                                         <div className="space-y-3">
@@ -579,8 +742,6 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                         </div>
                                     </div>
                                 )}
-
-                                {/* Step 2: Media */}
                                 {currentStep === 'media' && (
                                     <div className="space-y-6 animate-in fade-in duration-500">
                                         <div className="flex items-center gap-3 mb-6">
@@ -593,22 +754,20 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                             </div>
                                         </div>
 
-                                        {/* Кнопки та приховані поля вводу для реального завантаження */}
-                                        <div className="flex gap-3">
-                                            {/* КНОПКА: Завантажити фото */}
+
+                                        <div className="flex flex-col sm:flex-row gap-3">
                                             <Button
                                                 type="button"
-                                                variant="ghost"
+                                                variant="secondary"
                                                 onClick={() => imageInputRef.current?.click()}
-                                                className="flex gap-8 hover:scale-10"
+                                                className="flex w-full sm:w-auto justify-center gap-2"
                                             >
                                                 <Upload className="size-6" />
                                                 Завантажити фото
                                             </Button>
 
-                                            {/* ПРИХОВАНЕ ПОЛЕ ВВОДУ ДЛЯ ФОТО */}
                                             <input
-                                                ref={imageInputRef} // Призначаємо Ref
+                                                ref={imageInputRef}
                                                 id="file-image"
                                                 type="file"
                                                 accept="image/*"
@@ -616,21 +775,18 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                 onChange={(e) => handleFileChange(e, 'image')}
                                             />
 
-                                            {/* КНОПКА: Завантажити відео */}
                                             <Button
                                                 type="button"
-                                                variant="ghost"
-                                                // ПРИБИРАЄМО <label> та робимо Button клікабельною
+                                                variant="secondary"
                                                 onClick={() => videoInputRef.current?.click()}
-                                                className="flex gap-8 hover:scale-10"
+                                                className="flex w-full sm:w-auto justify-center gap-2"
                                             >
                                                 <Video className="size-6" />
                                                 Завантажити відео
                                             </Button>
 
-                                            {/* ПРИХОВАНЕ ПОЛЕ ВВОДУ ДЛЯ ВІДЕО */}
                                             <input
-                                                ref={videoInputRef} // Призначаємо Ref
+                                                ref={videoInputRef}
                                                 id="file-video"
                                                 type="file"
                                                 accept="video/*"
@@ -639,41 +795,42 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                             />
                                         </div>
 
-                                        {/* Список завантажених медіафайлів */}
                                         {mediaFiles.length > 0 ? (
-                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                                                 {mediaFiles.map((file) => (
                                                     <div
                                                         key={file.id}
-                                                        className={`relative group rounded-2xl overflow-hidden border-2 transition-all ${
+
+                                                        className={`relative group rounded-2xl overflow-hidden border-2 transition-all cursor-pointer ${
                                                             file.isMain ? 'border-primary shadow-lg shadow-primary/30' : 'border-border/50'
                                                         } ${
-                                                            file.uploadError ? 'border-destructive' : 'bg-secondary/50' // Червона рамка при помилці
+                                                            file.uploadError ? 'border-destructive' : 'bg-secondary/50'
                                                         }`}
                                                     >
                                                         <div className="aspect-video">
-                                                            {file.type === 'image' ? (
-                                                                <img
-                                                                    src={file.url}
-                                                                    alt={file.name}
-                                                                    className="w-full h-full object-cover"
-                                                                />
-                                                            ) : (
-                                                                // НОВИЙ БЛОК: Відображення відео
-                                                                <video
-                                                                    src={file.url}
-                                                                    title={file.name}
-                                                                    className="w-full h-full object-cover bg-black"
-                                                                    controls // Дозволяє користувачу керувати відтворенням
-                                                                    muted // Рекомендовано для автозапуску, хоча тут немає автозапуску, це гарна практика
-                                                                    playsInline // Важливо для мобільних пристроїв
-                                                                >
-                                                                    Ваш браузер не підтримує тег video.
-                                                                </video>
-                                                            )}
+                                                            <div className="aspect-video">
+                                                                {file.type === 'image' && file.url && (
+
+                                                                    <img
+                                                                        src={file.url}
+                                                                        alt={file.name || "Project media"}
+                                                                        className="w-full h-full object-cover"
+                                                                    />
+
+                                                                )}
+                                                                {file.type === 'video' && file.url && (
+
+                                                                    <video
+                                                                        src={file.url}
+                                                                        controls
+                                                                        className="w-full h-full object-cover"
+                                                                    >
+                                                                        Ваш браузер не підтримує тег video.
+                                                                    </video>
+                                                                )}
+                                                            </div>
                                                         </div>
 
-                                                        {/* Індикатор прогресу (Завантаження) */}
                                                         {file.isUploading && file.uploadProgress < 100 && (
                                                             <div className="absolute inset-0 flex items-center justify-center bg-black/80">
                                                                 <div className="p-4 w-4/5">
@@ -683,49 +840,61 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                             </div>
                                                         )}
 
-                                                        {/* Помилка завантаження */}
                                                         {file.uploadError && (
-                                                            <div className="absolute inset-0 flex items-center justify-center bg-destructive/80 p-2">
-                                                                <p className="text-xs text-white text-center">Помилка завантаження. Натисніть X для видалення.</p>
-                                                            </div>
-                                                        )}
-
-                                                        {/* Кнопки керування (Показуються при ховері або коли не йде завантаження) */}
-                                                        {file.uploadProgress === 100 && (
-                                                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-
-                                                                {/* Кнопка "Головне" */}
-                                                                {!file.isMain && file.type === 'image' && (
-                                                                    <Button
-                                                                        type="button"
-                                                                        onClick={() => handleSetMainImage(file.id)}
-                                                                        className="rounded-xl bg-primary/90 hover:bg-primary gap-1"
-                                                                    >
-                                                                        <Star className="size-3" />
-                                                                        Головне
-                                                                    </Button>
-                                                                )}
-
-                                                                {/* Кнопка "Видалити" */}
+                                                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-destructive/80 p-2">
+                                                                <p className="text-sm text-white text-center mb-2">Помилка завантаження.</p>
                                                                 <Button
                                                                     type="button"
-                                                                    variant="ghost"
                                                                     onClick={() => handleRemoveMedia(file.id)}
-                                                                    className="rounded-xl"
+                                                                    variant="danger"
+                                                                    className="bg-white/20 hover:bg-white/30 text-white rounded-full p-2 h-auto"
                                                                 >
-                                                                    <X className="size-3" />
+                                                                    <X className="size-4" /> Видалити
                                                                 </Button>
                                                             </div>
                                                         )}
 
-                                                        {/* Бедж "Головне" */}
-                                                        {file.isMain && (
-                                                            <div className="absolute top-2 right-2">
-                                                                <Badge className="bg-primary/90 backdrop-blur-sm gap-1">
-                                                                    <Star className="size-3" />
-                                                                    Головне
-                                                                </Badge>
+
+                                                        {file.uploadProgress === 100 && !file.uploadError && (
+                                                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2
+                                            sm:opacity-0 md:opacity-0 lg:opacity-0 ">
+
                                                             </div>
+                                                        )}
+
+
+                                                        {file.uploadProgress === 100 && !file.uploadError && (
+                                                            <>
+
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="danger"
+                                                                    onClick={() => handleRemoveMedia(file.id)}
+                                                                    className="absolute top-2 left-2 z-10 rounded-full p-1.5 bg-black/50 hover:bg-destructive/70 transition-all shadow-lg"
+                                                                >
+                                                                    <X className="size-3" />
+                                                                </Button>
+
+                                                                {!file.isMain && file.type === 'image' && (
+
+                                                                    <Button
+                                                                        onClick={() => handleSetMainImage(file.id)}
+                                                                        className="absolute top-2 right-2 z-10 rounded-full h-4 p-1.5 bg-black/50 hover:bg-primary transition-all shadow-lg"
+                                                                    >
+                                                                        <Star className="size-3" />
+                                                                    </Button>
+                                                                )}
+
+
+                                                                {file.isMain && (
+                                                                    <div className="absolute top-2 right-2 z-10">
+                                                                        <Badge className="bg-primary/90 backdrop-blur-sm gap-1">
+                                                                            <Star className="size-3" />
+                                                                            Головне
+                                                                        </Badge>
+                                                                    </div>
+                                                                )}
+                                                            </>
                                                         )}
                                                     </div>
                                                 ))}
@@ -741,7 +910,7 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                         )}
                                     </div>
                                 )}
-                                {/* Step 3: Links */}
+
                                 {currentStep === 'links' && (
                                     <div className="space-y-6 animate-in fade-in duration-500">
                                         <div className="flex items-center gap-3 mb-6">
@@ -757,31 +926,37 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                         <div className="space-y-3">
                                             <Label>Посилання GitHub</Label>
                                             {githubLinks.map((link, index) => (
-                                                <div key={index} className="flex gap-2">
+                                                <div key={index} className="flex flex-col sm:flex-row gap-2">
                                                     <Input
                                                         type="url"
                                                         placeholder="https://github.com/username/repo"
                                                         value={link}
                                                         onChange={(e) => handleGithubLinkChange(index, e.target.value)}
-                                                        className="rounded-2xl bg-secondary/50 backdrop-blur-sm border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                                        className={`rounded-2xl bg-secondary/50 backdrop-blur-sm focus:ring-2 focus:ring-primary/20 ${
+                                                            linkErrors.github && link.trim() ? 'border-destructive focus:border-destructive' : 'border-border/50 focus:border-primary'
+                                                        }`}
                                                     />
                                                     {githubLinks.length > 1 && (
                                                         <Button
                                                             type="button"
                                                             variant="ghost"
                                                             onClick={() => handleRemoveGithubLink(index)}
-                                                            className="rounded-xl bg-secondary/50 border-border/50 hover:bg-destructive/20 hover:border-destructive"
+                                                            className="rounded-xl w-full sm:w-auto justify-center bg-secondary/50 border-border/50 hover:bg-destructive/20 hover:border-destructive"
                                                         >
-                                                            <X className="size-4" />
+                                                            <X className="size-4 mr-2 sm:mr-0" />
+                                                            <span className="sm:hidden">Видалити</span>
                                                         </Button>
                                                     )}
                                                 </div>
                                             ))}
+                                            {linkErrors.github && (
+                                                <p className="text-sm text-destructive">{linkErrors.github}</p>
+                                            )}
                                             <Button
                                                 type="button"
                                                 variant="ghost"
                                                 onClick={handleAddGithubLink}
-                                                className="flex gap-8 hover:scale-0"
+                                                className="flex w-full sm:w-auto justify-center gap-2 hover:scale-105 transition-transform"
                                             >
                                                 <Plus className="size-6" />
                                                 Додати репозиторій
@@ -800,14 +975,18 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                 type="url"
                                                 placeholder="https://my-project.vercel.app"
                                                 value={deploymentLink}
-                                                onChange={(e) => setDeploymentLink(e.target.value)}
-                                                className="rounded-2xl bg-secondary/50 backdrop-blur-sm border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                                onChange={handleDeploymentLinkChange}
+                                                className={`rounded-2xl bg-secondary/50 backdrop-blur-sm focus:ring-2 focus:ring-primary/20 ${
+                                                    linkErrors.demo && deploymentLink.trim() ? 'border-destructive focus:border-destructive' : 'border-border/50 focus:border-primary'
+                                                }`}
                                             />
+                                            {linkErrors.demo && (
+                                                <p className="text-sm text-destructive">{linkErrors.demo}</p>
+                                            )}
                                         </div>
                                     </div>
                                 )}
 
-                                {/* Step 4: Details */}
                                 {currentStep === 'details' && (
                                     <div className="space-y-6 animate-in fade-in duration-500">
                                         <div className="flex items-center gap-3 mb-6">
@@ -822,7 +1001,7 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
 
                                         <div className="space-y-3">
                                             <Label htmlFor="techInput">Технології</Label>
-                                            <div className="flex gap-2">
+                                            <div className="flex gap-2 relative">
                                                 <Input
                                                     id="techInput"
                                                     type="text"
@@ -835,7 +1014,7 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                     disabled={isTechLoading}
                                                 />
                                                 {showSuggestions && techInput.trim() && filteredSuggestions.length > 0 && (
-                                                    <div className="absolute z-20 w-full mt-8 bg-card border border-border/50 rounded-xl shadow-xl max-h-60 overflow-y-auto">
+                                                    <div className="absolute z-20 w-full mt-14 bg-card border border-border/50 rounded-xl shadow-xl max-h-60 overflow-y-auto">
                                                         {filteredSuggestions.map((tech) => (
                                                             <button
                                                                 key={tech.id}
@@ -868,25 +1047,6 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                     ))}
                                                 </div>
                                             )}
-                                            {technologies.length > 0 && (
-                                                <div className="flex flex-wrap gap-2 mt-3">
-                                                    {technologies.map((tech) => (
-                                                        <Badge
-                                                            key={tech}
-                                                            className="bg-gradient-to-r from-primary/20 to-purple-600/20 border border-primary/30 backdrop-blur-sm pl-3 pr-2 py-1.5 gap-2"
-                                                        >
-                                                            {tech}
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleRemoveTechnology(tech)}
-                                                                className="hover:text-destructive transition-colors"
-                                                            >
-                                                                <X className="size-3" />
-                                                            </button>
-                                                        </Badge>
-                                                    ))}
-                                                </div>
-                                            )}
                                         </div>
 
                                         <div className="space-y-3">
@@ -896,9 +1056,9 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                     type="button"
                                                     variant="ghost"
                                                     onClick={() => setShowMarkdownPreview(!showMarkdownPreview)}
-                                                    className="flex gap-8 hover:scale-10"
+                                                    className="flex items-center gap-1 text-primary hover:text-primary/80"
                                                 >
-                                                    <Eye className="size-6" />
+                                                    <Eye className="size-4" />
                                                     {showMarkdownPreview ? 'Редагувати' : 'Переглянути'}
                                                 </Button>
                                             </div>
@@ -906,10 +1066,12 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                             {!showMarkdownPreview ? (
                                                 <Textarea
                                                     id="description"
-                                                    placeholder="# Мій проект&#10;&#10;Опис того, що робить проект...&#10;&#10;## Особливості&#10;- Особливість 1&#10;- Особливість 2&#10;&#10;**Підтримка Markdown**"
+                                                    placeholder={`Опис (від ${DESCRIPTION_MIN_LENGTH} до ${DESCRIPTION_MAX_LENGTH} символів)...`}
                                                     value={description}
-                                                    onChange={(e) => setDescription(e.target.value)}
-                                                    className="min-h-[300px] rounded-2xl bg-secondary/50 backdrop-blur-sm border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20 font-mono"
+                                                    onChange={handleDescriptionChange}
+                                                    className={`min-h-[300px] rounded-2xl bg-secondary/50 backdrop-blur-sm focus:ring-2 focus:ring-primary/20 font-mono ${
+                                                        (isDescriptionTooShort || isDescriptionTooLong) ? 'border-destructive focus:border-destructive' : 'border-border/50 focus:border-primary'
+                                                    }`}
                                                 />
                                             ) : (
                                                 <div
@@ -918,14 +1080,25 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                 />
                                             )}
 
-                                            <p className="text-sm text-muted-foreground">
-                                                Підтримує Markdown: # заголовок, **жирний**, *курсив*, `код`
-                                            </p>
+                                            <div className="flex justify-between items-center text-sm">
+                                                <p className="text-muted-foreground">
+                                                    Підтримує Markdown: # заголовок, **жирний**, *курсив*, `код`
+                                                </p>
+                                                <p className={(isDescriptionTooShort || isDescriptionTooLong) ? 'text-destructive' : 'text-muted-foreground'}>
+                                                    {description.length}/{DESCRIPTION_MAX_LENGTH}
+                                                </p>
+                                            </div>
+                                            {isDescriptionTooShort && (
+                                                <p className="text-sm text-destructive">Опис занадто короткий. Мінімум {DESCRIPTION_MIN_LENGTH} символів.</p>
+                                            )}
+                                            {isDescriptionTooLong && (
+                                                <p className="text-sm text-destructive">Опис занадто довгий. Максимум {DESCRIPTION_MAX_LENGTH} символів.</p>
+                                            )}
                                         </div>
                                     </div>
                                 )}
 
-                                {/* Step 5: Team */}
+
                                 {currentStep === 'team' && (
                                     <div className="space-y-6 animate-in fade-in duration-500">
                                         <div className="flex items-center gap-3 mb-6">
@@ -940,7 +1113,7 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
 
                                         <div className="space-y-3">
                                             <Label htmlFor="collaboratorEmail">Email співавтора</Label>
-                                            <div className="flex gap-2">
+                                            <div className="flex flex-col sm:flex-row gap-2">
                                                 <div className="relative flex-1">
                                                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                                                     <Input
@@ -950,18 +1123,19 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                         value={collaboratorEmail}
                                                         onChange={(e) => setCollaboratorEmail(e.target.value)}
                                                         onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleSearchUser())}
-                                                        className="rounded-2xl bg-secondary/50 backdrop-blur-sm border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20 pl-10"
+                                                        className="rounded-2xl bg-secondary/50 backdrop-blur-sm border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20 pl-10 h-12"
                                                         disabled={isSearching}
                                                     />
                                                 </div>
                                                 <Button
                                                     type="button"
                                                     variant="secondary"
-                                                    onClick={handleSearchUser} // Кнопка викликає пошук
+                                                    onClick={handleSearchUser}
                                                     disabled={isSearching || !collaboratorEmail.trim()}
-                                                    className="flex rounded-xl hover:scale-110 bg-primary/90 hover:bg-primary gap-2"
+
+                                                    className="flex w-full sm:w-auto justify-center rounded-xl hover:scale-105 bg-primary/90 hover:bg-primary gap-2 h-12"
                                                 >
-                                                    {isSearching ? <Loading /> : <UserPlus className="size-6" />}
+                                                    {isSearching ? <Loading className="size-6"/> : <UserPlus className="size-6" />}
                                                     {isSearching ? 'Пошук...' : 'Знайти'}
                                                 </Button>
                                             </div>
@@ -982,16 +1156,19 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                         </div>
                                                         <Button
                                                             type="button"
-                                                            onClick={handleAddCollaborator} // Додаємо знайденого
-                                                            disabled={collaborators.some(c => c.id === searchedUser.id)}
+                                                            onClick={handleAddCollaborator}
+                                                            disabled={collaborators.some(c => c.id === searchedUser.id) || isCollaboratorTheAuthor}
                                                             className="rounded-xl bg-primary/90 hover:bg-primary flex-shrink-0"
                                                         >
-                                                            {collaborators.some(c => c.id === searchedUser.id) ? 'Додано' : 'Додати'}
+                                                            {collaborators.some(c => c.id === searchedUser.id) ? 'Додано' : isCollaboratorTheAuthor ? 'Ви є автором' : 'Додати'}
                                                         </Button>
                                                     </div>
                                                 ) : isError ? (
                                                     <p className="text-sm text-destructive">Користувач не знайдений або помилка сервера.</p>
                                                 ) : null}
+                                                {isCollaboratorTheAuthor && (
+                                                    <p className="text-sm text-destructive mt-2">Ви є автором цього проекту, тому не можете бути співавтором.</p>
+                                                )}
                                             </div>
                                         </div>
 
@@ -1002,7 +1179,7 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                     {collaborators.map((collab) => (
                                                         <div
                                                             key={collab.id}
-                                                            className="flex items-center gap-3 p-3 bg-secondary/50 rounded-2xl border border-border/50 hover:border-primary/30 transition-all"
+                                                            className="flex items-center flex-wrap sm:flex-nowrap gap-3 p-3 bg-secondary/50 rounded-2xl border border-border/50 hover:border-primary/30 transition-all"
                                                         >
                                                             <Avatar className="size-10">
                                                                 <AvatarImage src={collab.avatar} alt={collab.name} />
@@ -1038,7 +1215,6 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                     </div>
                                 )}
 
-                                {/* Step 6: Review */}
                                 {currentStep === 'review' && (
                                     <div className="space-y-6 animate-in fade-in duration-500">
                                         <div className="flex items-center gap-3 mb-6">
@@ -1052,7 +1228,7 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                         </div>
 
                                         <div className="space-y-4">
-                                            {/* Project Name & Visibility */}
+
                                             <div className="p-4 bg-secondary/30 rounded-2xl border border-border/50">
                                                 <div className="flex items-center justify-between mb-2">
                                                     <Label className="text-muted-foreground">Назва проекту</Label>
@@ -1065,7 +1241,9 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                         Редагувати
                                                     </Button>
                                                 </div>
-                                                <p className="mb-2">{projectName || 'Не вказано'}</p>
+                                                <p className={`mb-2 ${isProjectNameTooShort || isProjectNameTooLong ? 'text-destructive font-bold' : ''}`}>
+                                                    {projectName || 'Не вказано'}
+                                                </p>
                                                 <div className="flex items-center gap-2">
                                                     {visibility === 'public' ? (
                                                         <>
@@ -1081,7 +1259,6 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                 </div>
                                             </div>
 
-                                            {/* Media */}
                                             {mediaFiles.length > 0 && (
                                                 <div className="p-4 bg-secondary/30 rounded-2xl border border-border/50">
                                                     <div className="flex items-center justify-between mb-3">
@@ -1097,9 +1274,13 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                     </div>
                                                     <div className="flex gap-2">
                                                         {mediaFiles.slice(0, 4).map((file) => (
-                                                            <div key={file.id} className="size-16 rounded-xl overflow-hidden bg-secondary border border-border/50">
+                                                            <div key={file.id} className={`size-16 rounded-xl overflow-hidden bg-secondary border border-border/50 ${file.isMain && file.type === 'image' ? 'border-primary border-2' : ''}`}>
                                                                 {file.type === 'image' ? (
-                                                                    <img src={file.url} alt="" className="w-full h-full object-cover" />
+                                                                    <img
+                                                                        src={file.url}
+                                                                        alt={file.name || "Project media"}
+                                                                        className="w-full h-full object-cover"
+                                                                    />
                                                                 ) : (
                                                                     <div className="w-full h-full flex items-center justify-center">
                                                                         <Video className="size-6 text-primary" />
@@ -1108,16 +1289,15 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                             </div>
                                                         ))}
                                                         {mediaFiles.length > 4 && (
-                                                            <div className="size-16 rounded-xl bg-secondary border border-border/50 flex items-center justify-center">
-                                                                <span className="text-sm text-muted-foreground">+{mediaFiles.length - 4}</span>
+                                                            <div className="size-16 rounded-xl bg-secondary border-2 border-background flex items-center justify-center">
+                                                                <span className="text-xs text-muted-foreground">+{mediaFiles.length - 4}</span>
                                                             </div>
                                                         )}
                                                     </div>
                                                 </div>
                                             )}
 
-                                            {/* Technologies */}
-                                            {technologies.length > 0 && (
+                                            {selectedTechnologies.length > 0 && (
                                                 <div className="p-4 bg-secondary/30 rounded-2xl border border-border/50">
                                                     <div className="flex items-center justify-between mb-3">
                                                         <Label className="text-muted-foreground">Технології</Label>
@@ -1131,16 +1311,15 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                         </Button>
                                                     </div>
                                                     <div className="flex flex-wrap gap-2">
-                                                        {technologies.map((tech) => (
-                                                            <Badge key={tech} className="bg-primary/10 text-primary border-primary/30">
-                                                                {tech}
+                                                        {selectedTechnologies.map((tech) => (
+                                                            <Badge key={tech.id} className="bg-primary/10 text-primary border-primary/30">
+                                                                {tech.name}
                                                             </Badge>
                                                         ))}
                                                     </div>
                                                 </div>
                                             )}
 
-                                            {/* Team */}
                                             {collaborators.length > 0 && (
                                                 <div className="p-4 bg-secondary/30 rounded-2xl border border-border/50">
                                                     <div className="flex items-center justify-between mb-3">
@@ -1172,7 +1351,6 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                 </div>
                                             )}
 
-                                            {/* Links */}
                                             {(githubLinks.some(l => l.trim()) || deploymentLink) && (
                                                 <div className="p-4 bg-secondary/30 rounded-2xl border border-border/50">
                                                     <div className="flex items-center justify-between mb-3">
@@ -1188,16 +1366,21 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                                     </div>
                                                     <div className="space-y-2 text-sm">
                                                         {githubLinks.filter(l => l.trim()).map((link, i) => (
-                                                            <div key={i} className="flex items-center gap-2 text-muted-foreground">
+                                                            <div key={i} className={`flex items-center gap-2 ${isGitHubUrlValid(link) ? 'text-muted-foreground' : 'text-destructive font-bold'}`}>
                                                                 <Github className="size-4" />
                                                                 <span className="truncate">{link}</span>
                                                             </div>
                                                         ))}
                                                         {deploymentLink && (
-                                                            <div className="flex items-center gap-2 text-muted-foreground">
+                                                            <div className="flex items-center gap-2 ${isValidUrl(deploymentLink) ? 'text-muted-foreground' : 'text-destructive font-bold'}">
                                                                 <LinkIcon className="size-4" />
                                                                 <span className="truncate">{deploymentLink}</span>
                                                             </div>
+                                                        )}
+                                                        {(!linkValidationPassed) && (
+                                                            <p className="text-sm text-destructive font-bold pt-1">
+                                                                Є некоректні посилання. Будь ласка, виправте.
+                                                            </p>
                                                         )}
                                                     </div>
                                                 </div>
@@ -1207,14 +1390,13 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                 )}
                             </div>
 
-                            {/* Navigation Buttons */}
-                            <div className="flex items-center justify-between pt-6 mt-6 border-t border-border/50">
+                            <div className="flex flex-col-reverse sm:flex-row items-center justify-between pt-6 mt-6 border-t border-border/50 gap-3">
                                 <Button
                                     type="button"
                                     variant="ghost"
                                     onClick={handlePrevStep}
                                     disabled={currentStepIndex === 0}
-                                    className="rounded-xl flex gap-8 hover:scale-10 py-4 bg-secondary/50 border-border/50 hover:bg-secondary/70 disabled:opacity-50"
+                                    className="rounded-xl flex w-full sm:w-auto justify-center py-3 bg-secondary/50 border-border/50 hover:bg-secondary/70 disabled:opacity-50"
                                 >
                                     <ArrowLeft className="size-6 mr-2" />
                                     Назад
@@ -1224,8 +1406,8 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                     <Button
                                         type="button"
                                         onClick={handleSubmit}
-                                        disabled={!canProceed()}
-                                        className="rounded-xl bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 shadow-xl shadow-primary/30 gap-2"
+                                        disabled={!canProceed() || isSubmitting}
+                                        className="rounded-xl w-full sm:w-auto bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 shadow-xl shadow-primary/30 gap-2"
                                     >
                                         <Rocket className="size-4" />
                                         Опублікувати проект
@@ -1235,7 +1417,7 @@ export function CreateProjectPage({ onNavigateBack }: CreateProjectPageProps) {
                                         type="button"
                                         onClick={handleNextStep}
                                         disabled={!canProceed()}
-                                        className="rounded-xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 disabled:opacity-50"
+                                        className="w-full sm:w-auto rounded-xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 disabled:opacity-50"
                                     >
                                         Далі
                                         <ChevronRight className="size-6 ml-2" />

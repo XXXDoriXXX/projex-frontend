@@ -17,29 +17,28 @@ export function StepSchedule(){
         duration = differenceInDays(dateRange.to, dateRange.from) + 1;
     }
     return (<div className="space-y-6 animate-in fade-in duration-500">
-    <div className="flex items-center gap-3 mb-6">
-        <div className="size-12 bg-gradient-to-br from-primary to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-primary/30">
-            <CalendarDays className="size-6 text-white" />
+        <div className="flex items-center gap-3 mb-6">
+            <div className="size-12 bg-gradient-to-br from-primary to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-primary/30">
+                <CalendarDays className="size-6 text-white" />
+            </div>
+            <div>
+                <h2>Дати проведення</h2>
+                <p className="text-muted-foreground">Вкажіть дати початку та завершення</p>
+            </div>
         </div>
-        <div>
-            <h2>Дати проведення</h2>
-            <p className="text-muted-foreground">Вкажіть дати початку та завершення</p>
-        </div>
-    </div>
 
         <div className="flex flex-col items-center gap-4">
             <Calendar
                 mode="range"
                 selected={dateRange}
                 onSelect={setDateRange}
-                numberOfMonths={2}
+                numberOfMonths={window.innerWidth < 768 ? 1 : 2}
+
                 disabled={{ before: new Date() }}
                 locale={uk}
 
-                className="rounded-2xl bg-secondary/30 border border-border/50 p-4"
+                className="rounded-2xl bg-secondary/30 border border-border/50 p-4 max-w-full sm:max-w-fit"
             />
-
-            {/* Інформаційна панель, яка показує, що обрано */}
             <div className="p-4 bg-secondary/30 rounded-2xl border border-border/50 w-full text-center">
                 {!dateRange?.from && (
                     <p className="text-muted-foreground">Оберіть дату початку</p>

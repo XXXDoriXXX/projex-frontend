@@ -8,7 +8,12 @@ import { Badge } from '../../../../components/badge';
 import Button from '../../../../components/Button';
 import { Eye, X } from 'lucide-react';
 
-export const SectionDetails = () => {
+interface SectionDetailsProps {
+    minDescLength: number;
+    maxDescLength: number;
+}
+
+export const SectionDetails: React.FC<SectionDetailsProps> = ({ minDescLength, maxDescLength }) => {
     const {
         description, setDescription,
         selectedTechnologies, setSelectedTechnologies
@@ -19,6 +24,17 @@ export const SectionDetails = () => {
     const [showMarkdownPreview, setShowMarkdownPreview] = useState(false);
 
     const { data: allTechnologies = [], isLoading: isTechLoading } = useGetTechnologiesQuery();
+
+    const isTooShort = description.length > 0 && description.length < minDescLength;
+    const isTooLong = description.length > maxDescLength;
+    const isInvalid = isTooShort || isTooLong;
+
+    const handleDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const value = e.target.value;
+        if (value.length <= maxDescLength) {
+            setDescription(value);
+        }
+    };
 
     const handleTechInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setTechInput(e.target.value);
@@ -47,6 +63,7 @@ export const SectionDetails = () => {
     }, [techInput, allTechnologies, selectedTechnologies]);
 
     const renderMarkdown = (text: string): string => {
+        // Залишаємо вашу функцію, але рекомендуємо використовувати бібліотеку (наприклад, marked)
         return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
     };
 
@@ -104,18 +121,34 @@ export const SectionDetails = () => {
                         <Eye className="size-4" /> {showMarkdownPreview ? 'Редагувати' : 'Переглянути'}
                     </Button>
                 </div>
+
                 {!showMarkdownPreview ? (
                     <Textarea
                         id="description"
                         value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        placeholder="# Опис проекту..."
-                        className="min-h-[300px] rounded-2xl bg-secondary/50 backdrop-blur-sm border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20 font-mono"
+                        onChange={handleDescriptionChange}
+                        placeholder={`# Опис проекту (від ${minDescLength} до ${maxDescLength} символів)...`}
+                        className={`min-h-[300px] rounded-2xl bg-secondary/50 backdrop-blur-sm font-mono ${
+                            isInvalid ? 'border-destructive focus:border-destructive' : 'border-border/50 focus:border-primary'
+                        }`}
                     />
                 ) : (
                     <div className="min-h-[300px] rounded-2xl bg-secondary/50 backdrop-blur-sm border border-border/50 p-4 prose prose-invert max-w-none"
                          dangerouslySetInnerHTML={{ __html: renderMarkdown(description) }}
                     />
+                )}
+
+                {/* Лічильник та Повідомлення про помилку */}
+                <div className="flex justify-between items-center text-sm">
+                    <p className="text-muted-foreground">Підтримує Markdown.</p>
+                    <p className={`${isInvalid ? 'text-destructive' : 'text-muted-foreground'}`}>
+                        {description.length}/{maxDescLength}
+                    </p>
+                </div>
+                {(isTooShort || isTooLong) && (
+                    <p className="text-sm text-destructive">
+                        Опис має бути від {minDescLength} до {maxDescLength} символів.
+                    </p>
                 )}
             </div>
         </div>
