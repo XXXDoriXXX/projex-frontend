@@ -20,6 +20,9 @@ export interface UserProfile {
     followingCount: number;
     projectsCount: number;
     createdAt: string;
+    authoredHackathonsCount: number;
+    participatedHackathonsCount: number;
+    subauthoredProjectsCount: number;
 }
 
 export interface UserProfileResponse {

@@ -73,7 +73,6 @@ export const SectionBasics: React.FC<SectionBasicsProps> = ({ minTitleLength, ma
     const projectLink = privateLinkToken ? `${window.location.origin}/project/view/${projectId}?token=${privateLinkToken}` : '';
     return (
         <div className="pt-4 space-y-6">
-            {/* Project Name */}
             <div className="space-y-2">
                 <Label htmlFor="projectName">Назва проекту *</Label>
                 <Input
@@ -99,7 +98,6 @@ export const SectionBasics: React.FC<SectionBasicsProps> = ({ minTitleLength, ma
                 </div>
             </div>
 
-            {/* Visibility */}
             <div className="space-y-3">
                 <Label>Видимість проекту</Label>
                 {isVisibilityError && (
@@ -111,7 +109,7 @@ export const SectionBasics: React.FC<SectionBasicsProps> = ({ minTitleLength, ma
                 <RadioGroup
                     value={visibility}
                     onValueChange={handleVisibilityChange}
-                    disabled={isChangingVisibility} // Блокуємо, поки триває запит
+                    disabled={isChangingVisibility}
                 >
                     <div className="space-y-3 relative">
                         {isChangingVisibility && (
@@ -120,7 +118,6 @@ export const SectionBasics: React.FC<SectionBasicsProps> = ({ minTitleLength, ma
                             </div>
                         )}
 
-                        {/* 1. Публічний */}
                         <label className={`flex items-start gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all ${visibility === 'public' ? 'bg-primary/10 border-primary shadow-md shadow-primary/20' : 'bg-secondary/30 border-border/50 hover:border-primary/30'}`}>
                             <RadioGroupItem value="public" id="public" className="mt-1" />
                             <div className="flex-1">
@@ -131,7 +128,6 @@ export const SectionBasics: React.FC<SectionBasicsProps> = ({ minTitleLength, ma
                             </div>
                         </label>
 
-                        {/* 2. Приватний */}
                         <label className={`flex items-start gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all ${visibility === 'private' ? 'bg-primary/10 border-primary shadow-md shadow-primary/20' : 'bg-secondary/30 border-border/50 hover:border-primary/30'}`}>
                             <RadioGroupItem value="private" id="private" className="mt-1" />
                             <div className="flex-1">
@@ -142,7 +138,6 @@ export const SectionBasics: React.FC<SectionBasicsProps> = ({ minTitleLength, ma
                             </div>
                         </label>
 
-                        {/* 3. Доступ за посиланням (Link) */}
                         <label className={`flex items-start gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all ${visibility === 'link' ? 'bg-primary/10 border-primary shadow-md shadow-primary/20' : 'bg-secondary/30 border-border/50 hover:border-primary/30'}`}>
                             <RadioGroupItem value="link" id="link" className="mt-1" />
                             <div className="flex-1">

@@ -17,6 +17,7 @@ import EditHackathonPage from "../features/hackathons/pages/EditHackathonPage.ts
 import HackathonListPage from "../features/hackathons/pages/HackathonListPage.tsx";
 import ProjectListPage from "../features/project/pages/ProjectListPage.tsx";
 import NotFound from "../shared/pages/NotFound.tsx";
+import EditProfile from "../features/profile/pages/EditProfile.tsx";
 
 export const router = createBrowserRouter([
     {
@@ -25,6 +26,7 @@ export const router = createBrowserRouter([
         children: [
             { path: "/", element: <Home /> },
             { path: "/profile/:username", element: <Profile /> },
+            { path: "/profile/edit", element: <EditProfile /> },
 
             { path: "/project/create", element: <CreateProject /> },
             { path: "/project/view/:id", element: <ProjectView /> },

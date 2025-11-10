@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import type { DetailedProject } from '../../../shared/types/Project.ts';
 
-// --- Типи, які ми будемо використовувати у формі ---
 export interface MediaFile { id: string; url: string; type: 'image' | 'video'; name: string; isMain: boolean; serverId?: string; uploadProgress: number; isUploading: boolean; uploadError: boolean; }
 export interface Collaborator { id: string; name: string; email: string; avatar?: string; }
 export interface SelectedTechnology { id: string; name: string; }
@@ -14,11 +13,10 @@ export interface ProjectUpdateData {
     mediaIds: string[];
     subauthorIds: string[];
     previewId: string | null;
-    collaborators: Collaborator[]; // Це тільки для прев'ю
+    collaborators: Collaborator[];
 }
 export interface LinkErrors { github: string | null; demo: string | null; }
 
-// --- Утилітарні функції валідації (Перенесені сюди для централізації) ---
 const isValidUrl = (url: string) => {
     if (!url) return true;
     try {
@@ -34,9 +32,7 @@ const isGitHubUrlValid = (url: string) => {
     return GITHUB_REGEX.test(url);
 };
 
-// --- Тип для нашого Context ---
 interface EditProjectContextType {
-    // Стан
     projectName: string;
     visibility: 'public' | 'private' | 'link';
     githubLinks: string[];
@@ -57,9 +53,7 @@ interface EditProjectContextType {
     setCollaborators: React.Dispatch<React.SetStateAction<Collaborator[]>>;
     setPrivateLinkToken: React.Dispatch<React.SetStateAction<string | null>>;
 
-    // Валідація
-    linkErrors: LinkErrors; // <-- ДОДАНО
-    // Фінальні дані для відправки та прев'ю
+    linkErrors: LinkErrors;
     projectUpdateData: ProjectUpdateData;
 }
 
@@ -91,10 +85,8 @@ export const EditProjectProvider: React.FC<EditProjectProviderProps> = ({ projec
     const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
     const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
     const [privateLinkToken, setPrivateLinkToken] = useState<string | null>(null);
-    // --- Стан для помилок посилань ---
-    const [linkErrors, setLinkErrors] = useState<LinkErrors>({ github: null, demo: null }); // <-- ДОДАНО СТАН
+    const [linkErrors, setLinkErrors] = useState<LinkErrors>({ github: null, demo: null });
 
-    // --- Функція валідації посилань (Винесена для reuse) ---
     const validateLinks = (ghLinks: string[], demoLink: string) => {
         let ghError: string | null = null;
         const nonBlankGhLinks = ghLinks.filter(l => l.trim());
@@ -114,7 +106,6 @@ export const EditProjectProvider: React.FC<EditProjectProviderProps> = ({ projec
         setLinkErrors({ github: ghError, demo: demoError });
     };
 
-    // --- Ефект для заповнення стану з projectData ---
     useEffect(() => {
         if (projectData) {
             const links = projectData.githubUrl ? projectData.githubUrl.split(',').filter(link => link.trim()) : [''];
@@ -147,7 +138,6 @@ export const EditProjectProvider: React.FC<EditProjectProviderProps> = ({ projec
             setSelectedTechnologies(projectData.technologies || []);
             setMediaFiles(mappedMedia);
             setCollaborators(mappedCollaborators);
-            // Ініціалізуємо валідацію посилань для початкових даних
             validateLinks(links, projectData.demoUrl || '');
 
             if (mappedMedia.length > 0 && !mappedMedia.some(f => f.isMain)) {
@@ -156,12 +146,10 @@ export const EditProjectProvider: React.FC<EditProjectProviderProps> = ({ projec
         }
     }, [projectData]);
 
-    // --- Ефект для автоматичної валідації при зміні посилань ---
     useEffect(() => {
         validateLinks(githubLinks, deploymentLink);
-    }, [githubLinks, deploymentLink]); // <-- ДОДАНО ЕФЕКТ
+    }, [githubLinks, deploymentLink]);
 
-    // --- 'projectUpdateData' тепер також живе в context ---
     const projectUpdateData = useMemo(() => {
         const uploadedMediaIds = mediaFiles.filter(f => f.serverId).map(f => f.serverId!);
         return {
@@ -188,7 +176,7 @@ export const EditProjectProvider: React.FC<EditProjectProviderProps> = ({ projec
         collaborators, setCollaborators,
         setPrivateLinkToken,
         privateLinkToken,
-        linkErrors, // <-- Експортуємо стан помилок
+        linkErrors,
         projectUpdateData
     };
 

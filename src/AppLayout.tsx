@@ -1,6 +1,7 @@
 
 import { Outlet } from "react-router-dom";
 import Header from "./components/Header.tsx";
+import {Toaster} from "sonner";
 
 
 const AppLayout = () => {
@@ -8,6 +9,7 @@ const AppLayout = () => {
         <div className="flex flex-col min-h-screen bg-gray-950 text-white">
             <Header />
             <main className="">
+                <Toaster position="top-center" richColors closeButton />
                 <Outlet />
             </main>
         </div>
