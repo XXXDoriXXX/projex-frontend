@@ -1,69 +1,63 @@
-# React + TypeScript + Vite
+# ProjeX Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Web client for ProjeX, a platform where developers publish their projects and take part in hackathons.
 
-Currently, two official plugins are available:
+![React](https://img.shields.io/badge/React_19-61DAFB?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite_7-646CFF?logo=vite&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS_4-06B6D4?logo=tailwindcss&logoColor=white)
+![React Router](https://img.shields.io/badge/React_Router_7-CA4245?logo=reactrouter&logoColor=white)
+![Vercel](https://img.shields.io/badge/Vercel-000000?logo=vercel&logoColor=white)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+**Live demo:** [projex-frontend-hazel.vercel.app](https://projex-frontend-hazel.vercel.app)
 
-## Expanding the ESLint configuration
+## Related repositories
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+| Repository | Role |
+| --- | --- |
+| [projex-frontend](https://github.com/XXXDoriXXX/projex-frontend) | This repo. React web client. |
+| [projex-backend](https://github.com/XXXDoriXXX/projex-backend) | REST API (Express, Prisma, PostgreSQL) that this client is built for. Its CORS settings already allow `http://localhost:5173` and the live demo. |
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Current status
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+This project is in early development. What exists today:
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- Home page and login page with email and password fields and social login buttons, in a dark theme.
+- Reusable UI components (button, form input, social button, text and form display).
+- Routing with React Router (`/`, `/login`).
+
+Pages for projects, dashboard, profile and registration are created as empty placeholders and are not routed yet. The client does not call the backend API yet.
+
+## Tech stack
+
+React 19, TypeScript, Vite 7, Tailwind CSS 4, React Router 7, lucide-react and react-icons, ESLint.
+
+## Getting started
+
+Requirements: Node.js and npm.
+
+```bash
+git clone https://github.com/XXXDoriXXX/projex-frontend.git
+cd projex-frontend
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+The app opens on `http://localhost:5173`.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### Scripts
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Start the Vite dev server |
+| `npm run build` | Type-check and build for production into `dist/` |
+| `npm run preview` | Preview the production build |
+| `npm run lint` | Run ESLint |
+
+## Environment variables
+
+The app does not read any environment variables at the moment.
+
+## Deployment
+
+The live demo is hosted on Vercel.
